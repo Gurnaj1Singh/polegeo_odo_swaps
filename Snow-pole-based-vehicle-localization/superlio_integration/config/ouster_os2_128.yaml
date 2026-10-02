@@ -2,9 +2,12 @@
 # Super-LIO config for the Ouster OS-2-128 snow-pole dataset (ROS2 branch schema).
 # Based on Super-LIO's NTU.yaml (the Ouster template: lidar_type 7).
 #
-# Primary / "downsampled" operating point: filter_rate 4 mirrors Faster-LIO's
-# downsampled point_filter_num=4 so the odometry-speed A/B is apples-to-apples
-# (target to beat: Faster-LIO ds 12.65 ms/scan = 79 FPS; GLIM 26.5 FPS).
+# SPEED-MAX variant: filter_rate 4 (keep every 4th point) mirrors Faster-LIO's
+# downsampled point_filter_num=4 for an apples-to-apples speed A/B (~217 FPS).
+# NOTE: this is NO LONGER the default — at filter_rate 4 the sparser cloud lets the
+# track scale drift (~0.903), which breaks the pole matcher at 0 % GNSS (pole-corrected
+# median 55.94 m). Use the default `ouster_os2_128_base.yaml` (filter_rate 2) for
+# deployment; use this only to benchmark peak throughput. See summary.md "Part K".
 #
 # Run:  ros2 run super_lio super_lio_node --ros-args --params-file <this file>
 # =====================================================================================

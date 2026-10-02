@@ -21,7 +21,7 @@ PY="$HOME/miniconda3/envs/polegeo/bin/python"
 
 BAG="${1:-$REPO/glim_integration/output/ros2_bag}"
 RATE="${2:-1.0}"
-CFG="${3:-$INTEG/config/ouster_os2_128.yaml}"
+CFG="${3:-$INTEG/config/ouster_os2_128_base.yaml}"
 FULL_BAG="$REPO/snow_pole_geo_localization_data/2024-02-28-12-59-51.bag"
 CSV="incremental_navigation_results_superlio.csv"
 

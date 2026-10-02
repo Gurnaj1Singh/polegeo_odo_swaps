@@ -56,15 +56,22 @@ superlio_integration/scripts/40_gnss_sweep.sh            # 0/10/25/50% GNSS, see
 - Extrinsic `lio.extrinsic.lidar_imu = [tx,ty,tz, R row-major(9)]`; from `Trip068.json`
   R=I, t=(-0.006253, 0.011775, -0.007645) m.
 - IMU noise `imu_na/ng/nba/nbg` = Faster-LIO's `acc_cov/gyr_cov/b_*`; accel is raw m/s².
-- `filter_rate: 4` (config) mirrors Faster-LIO's downsampled `point_filter_num=4` for a
-  fair speed A/B; `ouster_os2_128_base.yaml` uses `filter_rate: 2` (denser base).
+- **`filter_rate: 2` is the DEFAULT** (`ouster_os2_128_base.yaml`): keep every 2nd point.
+  The denser cloud holds scale (track ratio ~0.922) so the pole matcher stays correct at
+  0 % GNSS (pole-corrected 9.65 m vs 55.94 m at `filter_rate: 4`). `ouster_os2_128.yaml`
+  (`filter_rate: 4`) is the speed-max variant (~217 FPS) but degrades 0 % GNSS — see
+  `summary.md` Part K for the experiment.
 - Output is `nav_msgs/Odometry` on **`/lio/odom`** (no TUM file) → `00_` records it.
 - `lio.eva.timer: true` → per-stage compute times; flushed on SIGINT → FPS benchmark
   (rate-independent). Target to beat: Faster-LIO ds 12.65 ms/79 FPS, GLIM 26.5 FPS.
 
 ## Config variants
 
-- `config/ouster_os2_128.yaml` — primary, `filter_rate: 4` (downsampled/fast).
-- `config/ouster_os2_128_base.yaml` — `filter_rate: 2` (denser base for the A/B).
+- `config/ouster_os2_128_base.yaml` — **DEFAULT**, `filter_rate: 2` (denser; accurate at
+  all GNSS levels incl. 0 %; ~159 FPS). The runners use this with no `config` arg.
+- `config/ouster_os2_128.yaml` — speed-max, `filter_rate: 4` (~217 FPS) but degrades
+  0 % GNSS (pole-corrected 55.94 m). Benchmark-only.
 
-Run a variant: `scripts/00_run_superlio.sh <ros2_bag> 1.0 config/ouster_os2_128_base.yaml`.
+Run the speed-max variant explicitly:
+`scripts/00_run_superlio.sh <ros2_bag> 1.0 config/ouster_os2_128.yaml`.
+Full reasoning + the filter_rate experiment: `summary.md` Part K.

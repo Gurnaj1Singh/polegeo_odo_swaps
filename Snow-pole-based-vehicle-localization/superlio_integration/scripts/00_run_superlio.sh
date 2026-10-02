@@ -14,7 +14,7 @@
 # Usage: 00_run_superlio.sh [ros2_bag_dir] [play_rate] [config_yaml]
 #   ros2_bag_dir  default: ../glim_integration/output/ros2_bag
 #   play_rate     default: 1.0   (drop to 0.5 if scans are dropped)
-#   config_yaml   default: config/ouster_os2_128.yaml
+#   config_yaml   default: config/ouster_os2_128_base.yaml
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -28,7 +28,7 @@ mkdir -p "$OUT"
 
 BAG="${1:-$REPO/glim_integration/output/ros2_bag}"
 RATE="${2:-1.0}"
-CFG="${3:-$INTEG/config/ouster_os2_128.yaml}"
+CFG="${3:-$INTEG/config/ouster_os2_128_base.yaml}"
 LABEL="$(basename "$CFG" .yaml)"
 ODOM_BAG="$OUT/superlio_odom"
 LOG="$OUT/superlio_run_${LABEL}.log"

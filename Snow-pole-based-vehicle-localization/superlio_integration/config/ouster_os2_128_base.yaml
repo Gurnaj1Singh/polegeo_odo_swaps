@@ -1,6 +1,12 @@
 # =====================================================================================
-# Super-LIO config, DENSER "base" operating point (filter_rate 2), mirroring
-# Faster-LIO's base point_filter_num=2 for a base-vs-ds throughput/accuracy sweep.
+# Super-LIO config — DEFAULT / RECOMMENDED operating point (filter_rate 2).
+#
+# This is the config the runners use by default. The denser point stream (keep every
+# 2nd point) gives Super-LIO enough geometric constraint to hold scale (track-length
+# ratio ~0.922 vs ~0.903 at filter_rate 4), which keeps the downstream pole matcher
+# correct even at 0 % GNSS: pole-corrected median 9.65 m (vs 55.94 m at filter_rate 4),
+# on par with Faster-LIO/GLIM — at ~159 FPS (still ~2x Faster-LIO, ~6x GLIM).
+# See superlio_integration/summary.md "Part K" for the full experiment & reasoning.
 # Identical to ouster_os2_128.yaml except lio.sensor.filter_rate.
 # =====================================================================================
 /**:

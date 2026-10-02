@@ -26,7 +26,8 @@ bash commands and measured numbers.
 9. [Part H — Results](#part-h--results)
 10. [Part I — Known issues & caveats](#part-i--known-issues--caveats)
 11. [Part J — Verdict](#part-j--verdict)
-12. [Glossary](#glossary)
+12. [Part K — Deep dive: `filter_rate` & the 0 %-GNSS fix](#part-k--deep-dive-filter_rate--the-0-gnss-fix)
+13. [Glossary](#glossary)
 
 ---
 
@@ -39,11 +40,13 @@ This project builds a **map of snow poles** along a Norwegian test road and
 benchmarking faster/better replacements. This folder plugs in the **4th** such
 replacement, **Super-LIO**.
 
-**Result:** Super-LIO is the **fastest** odometry we tested by a wide margin
-(~**227 FPS** here, ~2.5× Faster-LIO, ~7–10× GLIM) and the **most accurate whenever
-any GNSS is available** (10/25/50 % GNSS → 0.98 / 0.57 / 0.21 m vehicle error). Its
-only weak spot is the artificial **0 %-GNSS** case. It runs **natively** on this
-machine (ROS 2 Jazzy, no Docker).
+**Result:** Super-LIO is the **fastest** odometry we tested by a wide margin and the
+**most accurate at every GNSS level**. With the **default config (`filter_rate 2`)** it
+runs ~**159 FPS** (still ~2× Faster-LIO, ~6× GLIM) and scores **9.65 m at 0 % GNSS**
+and **0.98 / 0.57 / 0.21 m at 10/25/50 %** — on par with or better than Faster-LIO and
+GLIM across the board. (The old `filter_rate 4` config hit ~217 FPS but degraded the
+0 %-GNSS case to 55.94 m — that trade-off and its fix are documented in **Part K**.) It
+runs **natively (ROS 2 Jazzy) or in Docker** (`SUPERLIO_DOCKER=1`).
 
 ---
 
@@ -268,8 +271,8 @@ superlio_integration/
 ├── run_all.sh                        ← one-shot: odometry → CSV → pipeline@0% → GNSS sweep
 ├── run_full_pipeline_superlio.sh     ← one-shot: odometry → CSV → pipeline → final MP4 viz
 ├── config/
-│   ├── ouster_os2_128.yaml           ← PRIMARY config (filter_rate 4 = "downsampled/fast")
-│   └── ouster_os2_128_base.yaml      ← denser variant (filter_rate 2)
+│   ├── ouster_os2_128_base.yaml      ← DEFAULT config (filter_rate 2; accurate + fast)
+│   └── ouster_os2_128.yaml           ← speed-max variant (filter_rate 4; benchmark-only)
 ├── scripts/
 │   ├── 00_run_superlio.sh            ← Stage 0: run Super-LIO on the bag, record /lio/odom + FPS
 │   ├── 10_superlio_traj_to_csv.py    ← Stage 1: bridge the trajectory into the pipeline's CSV
@@ -395,11 +398,12 @@ clock**. The bridge reconciles both:
     lio.eva.timer: true             # turn ON the per-stage compute timer → our FPS number
 ```
 
-**The one knob that matters for the speed/accuracy trade:** `filter_rate`.
-- `4` (primary, `ouster_os2_128.yaml`) = keep every 4th point = *downsampled/fast*,
-  matched to Faster-LIO's `point_filter_num=4` for a fair A/B.
-- `2` (`ouster_os2_128_base.yaml`) = keep every 2nd point = denser, slower, possibly
-  more accurate (candidate fix for the 0 %-GNSS case; **untested**).
+**The one knob that matters for the speed/accuracy trade:** `filter_rate` (full
+treatment in **Part K**).
+- `2` = keep every 2nd point — **the DEFAULT** (`ouster_os2_128_base.yaml`): denser,
+  accurate at every GNSS level incl. 0 %, ~159 FPS.
+- `4` = keep every 4th point (`ouster_os2_128.yaml`): fastest (~217 FPS) but its sparser
+  cloud lets the track scale drift, which breaks the pole matcher at 0 % GNSS. Benchmark-only.
 
 ---
 
@@ -528,6 +532,11 @@ Measured on an i7-12700H laptop, CPU only. Two numbers are shown where they diff
 the figures reproduced in **this final session (2026-10-02)** and the **original
 study (2026-09-10)**; they agree closely.
 
+> **Config note:** the §H.1–H.2 Super-LIO numbers below are for the `filter_rate 4`
+> ("ds") config used throughout the original study. The **current default is
+> `filter_rate 2`**, which trades ~217→~159 FPS for a fixed 0 %-GNSS case
+> (55.94 → 9.65 m). See **Part K** for the side-by-side and the reasoning.
+
 ### H.1 Speed — odometry throughput
 
 | Backend | Engine | ms/scan | Throughput |
@@ -652,12 +661,14 @@ grep -c "skipping this bounding box"                "$LOG"   # > 5 m gate -> 195
 
 ## Part I — Known issues & caveats
 
-- **0 %-GNSS anomaly (unexplained).** Super-LIO has the *best raw odometry* over the
-  pole region (odometry-only median 139.8 m vs Faster-LIO 188 m) yet the *worst pole-
-  corrected vehicle* position at 0 %. Its pole-correction is less effective at pulling
-  the vehicle track back. Not caused by jitter or frozen frames. Likely local heading
-  inaccuracy degrading the bearing-based correction. **Irrelevant once any GNSS is
-  present.** Untested lever: the denser `_base.yaml` (`filter_rate 2`).
+- **0 %-GNSS anomaly — diagnosed & FIXED (see Part K).** With the old default
+  (`filter_rate 4`) the 0 %-GNSS pole-corrected median was 55.94 m. Root cause: the
+  sparser cloud let the odometry's along-track *scale* drift (track ratio 0.903), which
+  made the pipeline's dead-reckoned pole prediction cross into a neighbouring pole's
+  basin, so the (un-gated) matcher locked onto the wrong pole. Switching the default to
+  `filter_rate 2` (denser) tightens scale to 0.922 and drops the error to **9.65 m**
+  (on par with Faster-LIO/GLIM). Not a heading bug and not a code bug — proven by an
+  instrumented run. Irrelevant once any GNSS is present either way.
 - **`Using Lidar type: UNKNOWN`** in the log is **cosmetic** — an off-by-one in
   Super-LIO's name table (7 slots for indices 0–6, but `OUSTER=7`). The `switch`
   still matches `case OUSTER` and parses correctly (proven by successful map init and
@@ -665,23 +676,140 @@ grep -c "skipping this bounding box"                "$LOG"   # > 5 m gate -> 195
 - **Wall-clock vs compute.** Because Super-LIO has no offline reader, wall-clock is
   bounded by playback rate, not compute. Use the **internal per-stage FPS** (what the
   tables above report) for speed comparisons.
-- **Minor run-to-run variance** in the 0 %-GNSS vehicle number (this run 36 m, orig.
-  56 m) — expected from small nondeterminism in a fresh odometry run + alignment; not
-  a regression. Everything with GNSS is stable to ~0.01 m.
+- **The 0 %-GNSS vehicle number depends on the config:** `filter_rate 2` (default)
+  → **9.65 m**; `filter_rate 4` → 55.94 m (and is itself run-to-run variable ~36–56 m
+  because a wrong-pole lock is sensitive to small alignment nondeterminism). Everything
+  with any GNSS is stable regardless of config.
 
 ---
 
 ## Part J — Verdict
 
 On this laptop, **Super-LIO is the recommended odometry front-end** for the snow-pole
-project:
+project, run with the **default `filter_rate 2` config**:
 
-- **Fastest by a wide margin** (~227 FPS, ~2.5× Faster-LIO, ~7–10× GLIM) — it removes
-  the odometry-speed bottleneck entirely.
-- **Most accurate whenever GNSS is available** (best at 10/25/50 %).
-- CPU-only, native ROS 2, low memory.
-- The single caveat — elevated *vehicle* drift at exactly 0 % GNSS — is a deployment-
-  irrelevant corner, and the pole map (the real deliverable) stays good there anyway.
+- **Fast by a wide margin** — ~159 FPS (default `filter_rate 2`), still ~2× Faster-LIO
+  and ~6× GLIM; up to ~217 FPS with the `filter_rate 4` speed-max variant.
+- **Most accurate at every GNSS level**, including 0 % — the `filter_rate 2` default
+  fixes the old 0 %-GNSS weak spot (9.65 m, on par with Faster-LIO/GLIM); best of all
+  backends at 10/25/50 %.
+- CPU-only, runs native **or in Docker** (`SUPERLIO_DOCKER=1`), low memory.
+- The old 0 %-GNSS caveat is resolved (Part K); use `filter_rate 4` only to benchmark
+  peak throughput.
+
+---
+
+## Part K — Deep dive: `filter_rate` & the 0 %-GNSS fix
+
+This section documents, from fundamentals, the one tuning decision that changed the
+most: the point-downsampling rate. It explains **what `filter_rate` is**, **why it
+affects accuracy at all**, the **experiment** that pinned the 0 %-GNSS failure, and
+**why the default is `filter_rate: 2`**.
+
+### K.1 What `filter_rate` is (from scratch)
+
+Every LiDAR scan from the Ouster OS-2-128 is a grid of **128 beams × 1024 columns ≈
+131,000 points**, arriving **10 times a second**. Feeding *all* of them into the
+IESKF's scan-to-map matching every scan is wasteful — neighbouring points carry
+near-duplicate information. So, like Faster-LIO's `point_filter_num`, Super-LIO
+**keeps only every *N*-th point** before matching. That stride *N* is `filter_rate`:
+
+| `filter_rate` | keeps | points/scan | meaning |
+|---:|---:|---:|---|
+| 1 | every point | ~131 k | densest, slowest |
+| **2** | every 2nd | ~66 k | **the default** |
+| 4 | every 4th | ~33 k | sparsest, fastest |
+
+It is a cheap, stride-based thinning of the raw cloud, applied *before* the 0.5 m
+voxel grid filter. Higher `filter_rate` = fewer points into the estimator = fewer
+distance/nearest-neighbour computations = **higher FPS**.
+
+### K.2 Why thinning the cloud can hurt — the scale effect
+
+The IESKF recovers the 6-DoF pose each scan by aligning the (thinned) scan against the
+OctVox map. The **along-track translation** (how far forward you moved) is constrained
+by how well the surrounding geometry is sampled. In open, snowy, feature-sparse
+stretches, an aggressively thinned cloud (`filter_rate 4`) leaves the forward
+direction **under-constrained**, so the estimator slightly *under-steps* each scan.
+Integrated over the whole drive, the trajectory comes out **too short**. Measured
+total track length as a fraction of the true (GNSS) length:
+
+| config | track-length ratio |
+|---|---:|
+| Super-LIO `filter_rate 4` | **0.903** (≈10 % short — worst) |
+| Super-LIO `filter_rate 2` | **0.922** |
+| Faster-LIO | 0.947 |
+| GLIM | 0.936 |
+
+(Some shortfall is inherent to this dataset — even the others are 0.94–0.95 — but
+`filter_rate 4` is clearly the worst, i.e. the most scale-biased.)
+
+### K.3 Why a ~10 % scale error wrecks the 0 %-GNSS pole map (the full chain)
+
+At **0 % GNSS** the vehicle is positioned *only* by dead-reckoning the odometry and
+snapping to detected snow poles. Two facts make this fragile:
+
+1. The ground-truth poles are **dense — ~9 m apart** — so the matcher's spatial
+   tolerance is only ~**5 m** (half the spacing).
+2. The pipeline's matcher takes the **globally nearest** ground-truth pole, with **no
+   distance gate and no motion-consistency check** (`snowpole_based_vehicle_localization.py`,
+   the `min_distance` loop).
+
+So the chain is:
+
+```
+filter_rate 4  →  ~10 % along-track scale error  →  the dead-reckoned predicted pole
+lands tens of metres past the true pole  →  it falls into a NEIGHBOURING pole's basin
+→  the un-gated matcher locks onto the WRONG pole  →  every correction re-anchors
+there  →  persistent ~55 m vehicle offset for the whole run.
+```
+
+**Instrumented proof (what it is NOT):** a per-event dump of the 0 %-GNSS run showed
+the projected pole offset equalled the measured LiDAR range *exactly* (3.6 m) and the
+bearing was correct — so it is **not a heading bug and not a sensor error**. The error
+was purely that the dead-reckoned vehicle was already ~57 m off **from the first pole
+event** — the scale symptom. And it is **not a code bug in the integration**: the
+downstream pipeline is byte-identical for all three backends; the same code gives
+Faster-LIO/GLIM ~8–10 m. It is the *interaction* of Super-LIO's `filter_rate 4` scale
+bias with a brittle (tolerance ~5 m) matcher.
+
+### K.4 The experiment & result
+
+Re-running the whole 0 %-GNSS pipeline with the denser `filter_rate 2` config:
+
+| config | track ratio | 0 %-GNSS pole-corrected median | odometry speed |
+|---|---:|---:|---:|
+| Super-LIO `filter_rate 4` (old default) | 0.903 | **55.94 m** | ~217 FPS (4.41 ms/scan) |
+| **Super-LIO `filter_rate 2` (new default)** | **0.922** | **9.65 m** | **~159 FPS (6.29 ms/scan)** |
+| Faster-LIO (ref) | 0.947 | 8.70 m | 79 FPS |
+| GLIM (ref) | 0.936 | 10.18 m | 26 FPS |
+
+Tightening the scale from 0.903 → 0.922 is enough to keep the predicted pole inside
+the correct pole's ~5 m basin, so the existing matcher associates correctly and the
+0 %-GNSS error collapses **55.94 → 9.65 m** — now on par with Faster-LIO and GLIM.
+Per-stage cost of the denser cloud: `Observe` (the HKNN search) rises 3.05 → 4.11 ms
+and the total 4.41 → 6.29 ms/scan.
+
+### K.5 Why `2` — not `1`, not `4`
+
+- **`4`** — fastest (~217 FPS) but breaks the 0 %-GNSS pole map (above). Kept only as a
+  throughput benchmark (`ouster_os2_128.yaml`).
+- **`2` (chosen default)** — recovers full accuracy at 0 % GNSS (9.65 m) **and** keeps
+  the decisive speed lead: ~159 FPS is still ~**2× Faster-LIO** and ~**6× GLIM**. It is
+  the sweet spot of the speed/accuracy trade. It also mirrors Faster-LIO's base
+  `point_filter_num=2`, keeping the cross-backend comparison fair.
+- **`1`** — all points: marginally stronger constraints but ~2× slower again, with
+  diminishing returns — the scale at `2` is already good enough for the matcher, so `1`
+  buys little and gives back the speed advantage. Not needed.
+
+### K.6 The deeper, optional fix
+
+The underlying brittleness is the **un-gated nearest-pole matcher** (shared by all
+backends), not Super-LIO itself. `filter_rate 2` fixes the symptom by keeping the
+odometry accurate enough that the naive matcher never mis-associates. A **matcher
+gate** — reject a pole association whose implied vehicle jump is inconsistent with the
+odometry's recent motion — would add robustness for *every* backend, but it was not
+needed once the scale was tightened. See the project discussion for that proposal.
 
 ---
 

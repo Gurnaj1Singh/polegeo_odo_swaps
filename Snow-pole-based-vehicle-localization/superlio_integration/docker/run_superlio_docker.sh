@@ -10,7 +10,7 @@
 # Usage:  run_superlio_docker.sh [ros2_bag_dir] [rate] [config_yaml]
 #   ros2_bag_dir  default: ../glim_integration/output/ros2_bag
 #   rate          default: 3.0   (reliable-QoS source mod keeps all scans)
-#   config_yaml   default: config/ouster_os2_128.yaml
+#   config_yaml   default: config/ouster_os2_128_base.yaml
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -23,7 +23,7 @@ OUT="$INTEG/output"; mkdir -p "$OUT"
 
 BAG="${1:-$REPO/glim_integration/output/ros2_bag}"
 RATE="${2:-3.0}"
-CFG="${3:-$INTEG/config/ouster_os2_128.yaml}"
+CFG="${3:-$INTEG/config/ouster_os2_128_base.yaml}"
 IMAGE="${SUPERLIO_IMAGE:-superlio:jazzy}"
 
 # pick docker (fall back to sudo if the daemon socket isn't reachable as this user)
