@@ -1,0 +1,79 @@
+# =====================================================================================
+# Faster-LIO configuration for Ouster OS-2-128  (E39 Hemnekjolen snow-pole dataset)
+# Sensor facts verified directly from the bag + Trip068.json:
+#   - /ouster/points : PointCloud2, 128 x 1024, 10 Hz, official Ouster fields
+#                      (x,y,z,intensity,t[uint32 ns],reflectivity,ring,ambient,range)
+#   - /ouster/imu    : Imu, 100 Hz, linear_acceleration in m/s^2 (z ~ 9.94), gyro rad/s
+#   - LiDAR and IMU share the SAME Ouster sensor clock  -> time_sync_en: false
+#   - per-point time span 0..99.9 ms  -> one 10 Hz sweep, used for de-skew
+# Extrinsic (points arrive in os_sensor frame; IMU in os_imu):
+#   T_imu_lidar = inv(imu_to_sensor_transform)  ->  R = I,  t = -(6.253,-11.775,7.645) mm
+# =====================================================================================
+
+common:
+    lid_topic: "/ouster/points"
+    imu_topic: "/ouster/imu"
+    # LiDAR and IMU are already on one clock (both ~13214 s sensor time). Do NOT
+    # let Faster-LIO try to re-synchronise them.
+    time_sync_en: false
+    time_offset_lidar_to_imu: 0.0
+
+preprocess:
+    lidar_type: 3          # 1=Livox AVIA, 2=Velodyne, 3=Ouster
+    scan_line: 128         # OS-2-128
+    blind: 2.0             # drop returns closer than 2 m (ego / near-field noise)
+    # NOTE (verified against faster-lio src/pointcloud_preprocess.cc::Oust64Handler):
+    # the Ouster handler HARD-CODES de-skew as `curvature = point.t / 1e6` (ns->ms)
+    # and does NOT read `time_scale`. Our bag's `t` is nanoseconds (0..99.9e6 ==
+    # 0..99.9 ms/scan), so de-skew is correct out of the box. `time_scale` below is
+    # therefore a harmless no-op for lidar_type:3 (kept for documentation only).
+    # Also: Oust64Handler ignores `ring`, so the PCL warning
+    # "Failed to find match for field 'ring'" (our ring is uint16 vs struct uint8)
+    # is benign and does not affect odometry.
+    time_scale: 1.0e-6
+
+mapping:
+    acc_cov: 0.1
+    gyr_cov: 0.1
+    b_acc_cov: 0.0001
+    b_gyr_cov: 0.0001
+    fov_degree: 180.0
+    det_range: 150.0       # OS-2 long range; observed returns up to ~134 m
+    extrinsic_est_en: false
+    # LiDAR(os_sensor) -> IMU(os_imu). Sub-cm; taken from Trip068.json.
+    extrinsic_T: [ -0.006253, 0.011775, -0.007645 ]
+    extrinsic_R: [ 1.0, 0.0, 0.0,
+                   0.0, 1.0, 0.0,
+                   0.0, 0.0, 1.0 ]
+
+publish:
+    path_publish_en: true
+    scan_publish_en: true          # publish /cloud_registered for RViz sanity check
+    dense_publish_en: false
+    scan_bodyframe_pub_en: false
+
+path_save_en: true                 # also dump a TUM trajectory text file
+
+pcd_save:
+    pcd_save_en: false             # set true only if you want the fused map .pcd
+    interval: -1
+
+feature_extract_enable: false
+point_filter_num: 4                # DOWNSAMPLING (2026-09-08): keep every 4th point
+                                   # (was 2). Halves the input cloud to speed up the
+                                   # per-scan IEKF. Global yaw drift is dominated by the
+                                   # low-grade Ouster IMU, not point density (4 vs 2 only
+                                   # nudged median drift 449->~505 m over 10 km), and
+                                   # that global drift is corrected downstream by the
+                                   # snow poles anyway. LOCAL frame-to-frame increments
+                                   # (what the pipeline dead-reckons with) stay excellent.
+max_iteration: 4
+filter_size_surf: 1.0              # DOWNSAMPLING (2026-09-08): coarser input voxel (was
+                                   # 0.5). ~8x fewer surf points into the IEKF per scan.
+filter_size_map: 0.5
+cube_side_length: 1000.0
+
+# ---- Faster-LIO specific (iVox incremental voxel map) ----
+ivox_grid_resolution: 0.5
+ivox_nearby_type: 18               # 6/18/26 neighbour search; 18 is a good default
+esti_plane_threshold: 0.1

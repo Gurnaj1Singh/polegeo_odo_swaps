@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>livox_ros_driver2</name>
+  <version>1.0.0</version>
+  <description>
+    Interface-only shim providing livox_ros_driver2 CustomMsg/CustomPoint so
+    Super-LIO's find_package(livox_ros_driver2) and custom_msg.hpp include
+    resolve. The upstream driver is not needed: this project only uses the
+    Ouster PointCloud2 path, so these messages are never received at runtime.
+  </description>
+  <maintainer email="vendored@example.com">vendored</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <depend>std_msgs</depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

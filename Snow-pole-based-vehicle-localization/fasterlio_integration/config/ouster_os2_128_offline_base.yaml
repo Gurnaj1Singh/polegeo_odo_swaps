@@ -1,0 +1,56 @@
+# =====================================================================================
+# OFFLINE-BENCHMARK config: BASELINE (point_filter_num=2, filter_size_surf=0.5).
+# Identical to ouster_os2_128.yaml except:
+#   - publish/scan_effect_pub_en added (offline LoadParamsFromYAML requires it)
+#   - cube_side_length is an int literal (offline parses it with .as<int>())
+# Used only by run_mapping_offline for the downsampling A/B throughput benchmark.
+# =====================================================================================
+
+common:
+    lid_topic: "/ouster/points"
+    imu_topic: "/ouster/imu"
+    time_sync_en: false
+    time_offset_lidar_to_imu: 0.0
+
+preprocess:
+    lidar_type: 3
+    scan_line: 128
+    blind: 2.0
+    time_scale: 1.0e-6
+
+mapping:
+    acc_cov: 0.1
+    gyr_cov: 0.1
+    b_acc_cov: 0.0001
+    b_gyr_cov: 0.0001
+    fov_degree: 180.0
+    det_range: 150.0
+    extrinsic_est_en: false
+    extrinsic_T: [ -0.006253, 0.011775, -0.007645 ]
+    extrinsic_R: [ 1.0, 0.0, 0.0,
+                   0.0, 1.0, 0.0,
+                   0.0, 0.0, 1.0 ]
+
+publish:
+    path_publish_en: true
+    scan_publish_en: true
+    dense_publish_en: false
+    scan_bodyframe_pub_en: false
+    scan_effect_pub_en: false
+
+path_save_en: true
+
+pcd_save:
+    pcd_save_en: false
+    interval: -1
+
+feature_extract_enable: false
+point_filter_num: 2
+max_iteration: 4
+filter_size_surf: 0.5
+filter_size_map: 0.5
+cube_side_length: 1000
+
+ivox_grid_resolution: 0.5
+ivox_nearby_type: 18
+esti_plane_threshold: 0.1

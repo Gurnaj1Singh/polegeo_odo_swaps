@@ -1,0 +1,26 @@
+{
+  "__doc__": [
+    "Overrides applied by scripts/patch_configs.py ON TOP OF the GLIM default",
+    "configs extracted from the image (scripts/01_extract_and_patch_configs.sh).",
+    "Each key is set wherever it appears in the target file's JSON tree, so we do",
+    "NOT depend on the exact wrapper/nesting the image ships. See PLAN.md §4.",
+    "T_lidar_imu is [tx,ty,tz, qx,qy,qz,qw] (R=I -> identity quat); t in metres",
+    "from Trip068.json (os_sensor->os_imu). Sub-cm: verify sign during bring-up."
+  ],
+  "config_ros.json": {
+    "points_topic": "/ouster/points",
+    "imu_topic": "/ouster/imu",
+    "acc_scale": 1.0,
+    "extension_modules": [],
+    "enable_local_mapping": true,
+    "enable_global_mapping": true
+  },
+  "config_sensors.json": {
+    "T_lidar_imu": [-0.006253, 0.011775, -0.007645, 0.0, 0.0, 0.0, 1.0]
+  },
+  "config.json": {
+    "config_odometry": "config_odometry_gpu.json",
+    "config_sub_mapping": "config_sub_mapping_cpu.json",
+    "config_global_mapping": "config_global_mapping_pose_graph.json"
+  }
+}

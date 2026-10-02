@@ -1,0 +1,91 @@
+# =============================================================================
+# .gitignore for Snow-pole-based-vehicle-localization
+#
+# Goal: push only the SOURCE (code, configs, docs, the YOLO model, ground-truth &
+# reference CSVs) to GitHub — NOT the ~78 GB of downloaded sensor bags or the
+# regenerable pipeline outputs (odometry bags, logs, videos, figures, result CSVs).
+#
+# Everything excluded here is either (a) downloaded data, or (b) reproducible by
+# re-running the scripts, so it does not belong in version control. If you ever
+# DO want to archive a specific small artifact, force-add it:  git add -f <path>
+# =============================================================================
+
+# ---- Raw / downloaded sensor data (tens of GB — never commit) ---------------
+snow_pole_geo_localization_data/
+
+# ---- Large binary recordings & point clouds (anywhere in the tree) ----------
+*.bag
+*.bag.active
+*.db3
+*.db3-wal
+*.db3-shm
+*.mcap
+*.pcd
+*.ply
+
+# ---- Generated pipeline outputs (regenerable; dominated by multi-GB bags) ----
+# The scripts create these dirs with `mkdir -p`, so losing them is harmless.
+fasterlio_integration/output/
+glim_integration/output/
+superlio_integration/output/
+output/
+
+# ---- Generated per-backend result CSVs (produced by the pipeline) -----------
+# (The ORIGINAL FastReg CSV `incremental_navigation_results.csv` and the
+#  ground-truth pole CSV are kept — they are inputs/references, not generated.)
+incremental_navigation_results_fasterlio.csv
+incremental_navigation_results_glim.csv
+incremental_navigation_results_superlio.csv
+snowpole_results_*.csv
+timing_comparison.csv
+run_metrics.csv
+
+# ---- Logs, videos, animations ------------------------------------------------
+*.log
+*.mp4
+*.gif
+*.avi
+*.mkv
+
+# ---- Python caches & build artifacts ----------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Virtual environments ----------------------------------------------------
+.venv/
+venv/
+env/
+.baginspect_venv/
+*venv*/
+
+# ---- Editor / OS cruft -------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Secrets / local config (just in case) ----------------------------------
+.env
+.env.*
+*.key
+*.pem
+
+# =============================================================================
+# Kept on purpose (do NOT ignore): *.py *.sh *.yaml *.yml *.md *.json(configs)
+#   model/pole_best_signal.pt, Trip068.json, LICENSE, README.md,
+#   Groundtruth_pole_location_*.csv, incremental_navigation_results.csv,
+#   environment.yml, SYSTEM_CONFIGURATION.txt, "Vehicle_GeoLoc paper.pdf"
+# Note: timing_*.json live under */output/ and are therefore ignored with it.
+# =============================================================================

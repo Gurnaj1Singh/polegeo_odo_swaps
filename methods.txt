@@ -1,0 +1,2177 @@
+╭─── Claude Code v2.1.158 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                Welcome back Gurnaj!                │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ What's new              │
+│                        ▘▘ ▝▝                       │ Subagent forking is no… │
+│      Opus 4.8 · Claude Pro ·                       │ Type `@` in the prompt… │
+│      gurnajsinghmann@gmail.com's Organization      │ `SendMessage` now deli… │
+│           ~/Documents/Projects/Fasterlio           │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+   Opus 4.8 is here! Now defaults to high effort · /effort xhigh for your hardest tasks
+
+❯ fastreg was replaced by fasterlio, but still there was not much improvement   
+  in the speed, although we could replace fastreg with fasterlio as it uses imu 
+  and is much more trustworthy. but the main downside of the project is the     
+  time taken for odometry, research and find all the best alternative           
+  algorithms that could be used in place of fasterlio and fastreg and are up to 
+  date and latest.                                                              
+
+● I'll research this thoroughly. Let me first understand your current pipeline,
+  then research the latest alternatives.
+
+  Recalled 2 memories (ctrl+o to expand)
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Good — I have full context. Your pipeline uses an Ouster OS-2-128 (10 Hz) + 
+  IMU, and the bottleneck is that Faster-LIO runs at only ~1.0× real-time (≈551
+  s to process a 541 s bag), while the rest of the pipeline is ~4× real-time.
+  You want odometry that is (a) faster, (b) IMU-fused/trustworthy, and (c)
+  current. Let me research the latest options.
+
+● Web Search("fastest LiDAR-inertial odometry 2025 real-time comparison
+            FAST-LIO2 Point-LIO iG-LIO DLIO")
+  ⎿  Did 1 search in 7s
+
+● Web Search("state of the art LiDAR inertial odometry 2026 benchmark accuracy
+            speed")
+  ⎿  Did 1 search in 6s
+
+● Strong leads. Let me dig into the fastest recent candidates and confirm which
+  fuse IMU, plus how they handle dense Ouster 128-beam clouds.
+
+● Web Search("iG-LIO incremental GICP LiDAR inertial odometry runtime FAST-LIO2
+            comparison open source")
+  ⎿  Did 1 search in 7s
+
+● Web Search("Point-LIO high bandwidth LiDAR inertial odometry github aggressive
+            motion")
+  ⎿  Did 1 search in 6s
+
+● Fetch(https://arxiv.org/html/2509.05723v1)
+  ⎿  Received 365.7KB (200 OK)
+
+● Fetch(https://arxiv.org/pdf/2512.03397)
+  ⎿  Received 452.7KB (200 OK)
+
+● Let me round out the picture with DLIO (known for speed) and GPU-accelerated /
+  newest 2025–26 options, plus the dense-cloud angle that specifically affects
+  your OS-2-128.
+
+● Web Search("DLIO Direct LiDAR-Inertial Odometry speed real-time factor
+            coarse-to-fine github")
+  ⎿  Did 1 search in 6s
+
+● Web Search("GPU accelerated LiDAR inertial odometry 2025 CUDA real-time dense
+            point cloud")
+  ⎿  Did 1 search in 7s
+
+● Web Search("KISS-ICP GenZ-ICP MAD-ICP LiDAR odometry Ouster 128 dense
+            downsampling speed 2024 2025")
+  ⎿  Did 1 search in 8s
+
+● Let me confirm whether your machine has a GPU (the "G15" suggests a discrete
+  NVIDIA GPU, which changes the recommendation) and get GLIM specifics.
+
+● Bash(echo "=== GPU ==="; lspci 2>/dev/null | grep -Ei 'vga|3d|nvidia|display'
+      ; echo "=== nvidia-smi ==="; nvidia-smi -L 2>/dev/null || echo "no
+      nvidia-smi"; echo "=…)
+  ⎿  === GPU ===
+     0000:00:02.0 VGA compatible controller: Intel Corporation Alder Lake-P
+      GT2 [Iris Xe Graphics] (rev 0c)
+     … +9 lines (ctrl+o to expand)
+
+● Fetch(https://github.com/koide3/glim)
+  ⎿  Received 320.3KB (200 OK)
+● I have everything I need. Key hardware finding: your machine (i7-12700H, 20 
+  threads + NVIDIA RTX 3050 Ti) has a discrete CUDA GPU that your current
+  CPU-only Faster-LIO/Docker setup isn't using — that materially changes the
+  best option. Here's the research.
+
+  First, why Faster-LIO is only ~1× real-time here
+
+  This is the key diagnosis before picking a replacement: it's your point 
+  density, not the algorithm being "slow." The OS-2-128 at 1024×10 emits
+  ~131,000 points/scan. Published Faster-LIO benchmarks that hit ~350 FPS are on
+  a Livox Mid-360 (~15,000 pts/scan) — ~9× sparser. Every ESIKF-family LIO
+  (FAST-LIO2, Faster-LIO, Point-LIO, iG-LIO…) is dominated by nearest-neighbour
+  cost that scales with point count, so on dense 128-beam clouds they all
+  collapse toward real-time on a laptop CPU. Two consequences:
+
+  - A different CPU algorithm buys you a constant factor (≈2–4×), not an order 
+  of magnitude, unless you also cut point count.
+  - The cheapest speedup requires no new algorithm at all: raise
+  point_filter_num / filter_size_surf (more aggressive voxel downsampling). Your
+  notes say 4→2 barely changed accuracy — so going the other way (e.g.
+  point_filter_num 4→6–8, or a coarser surf voxel) is likely free speed for a
+  car on open Nordic roads. Worth trying before you re-integrate anything.
+
+  The alternatives, ranked for your case (dense LiDAR + IMU + offline batch)
+
+  Algorithm: GLIM
+  Year: 2024
+  IMU-fused: ✅ factor-graph
+  Speed vs Faster-LIO: GPU — offloads dense scan-matching to CUDA
+  Maturity: High, ROS2, MIT
+  Notes: Best fit for dense OS-2-128 given your GPU; also has loop
+  closure/global
+     opt
+  ────────────────────────────────────────
+  Algorithm: Super-LIO
+  Year: 2025
+  IMU-fused: ✅ IESKF
+  Speed vs Faster-LIO: ~1.7× (3.7–4.2× vs FAST-LIO2)
+  Maturity: New but open
+  Notes: Best avg accuracy in its paper; drop-in ESIKF style
+  ────────────────────────────────────────
+  Algorithm: iG-LIO
+  Year: 2024
+  IMU-fused: ✅ IESKF
+  Speed vs Faster-LIO: Faster, "more efficient than Faster-LIO"
+  Maturity: Published RA-L, open
+  Notes: GICP-based; robust on structured scenes
+  ────────────────────────────────────────
+  Algorithm: Point-LIO
+  Year: 2023
+  IMU-fused: ✅ (models IMU as output)
+  Speed vs Faster-LIO: Comparable; point-wise
+  Maturity: HKU-MARS, very mature
+  Notes: No de-skew needed, extremely robust; kHz output
+  ────────────────────────────────────────
+  Algorithm: Surfel-LIO
+  Year: Dec 2025
+  IMU-fused: ✅
+  Speed vs Faster-LIO: ~2× (690 vs 353 FPS)
+  Maturity: Very new
+  Notes: Pre-computed surfels + Z-order voxel hashing
+  ────────────────────────────────────────
+  Algorithm: DLIO
+  Year: 2023
+  IMU-fused: ✅
+  Speed vs Faster-LIO: Fast, single-scan-to-map
+  Maturity: UCLA, mature, ROS1/2
+  Notes: Continuous-time deskew; great on dense clouds
+  ────────────────────────────────────────
+  Algorithm: KISS-ICP / GenZ-ICP / MAD-ICP
+  Year: 2023–25
+  IMU-fused: ❌ LiDAR-only
+  Speed vs Faster-LIO: Very fast
+  Maturity: Very mature
+  Notes: Reference only — you specifically want IMU; drop these
+
+  Tier 1 — CPU drop-ins (same ESIKF family as Faster-LIO, lowest integration 
+  cost)
+
+  Because you already have the Docker + config + trajectory→CSV bridge working
+  for Faster-LIO, these three swap in with almost the same interface (same input
+  topics, same yaml style, same output pose stream):
+  - Super-LIO — the strongest pure-speed CPU pick: 3.7–4.2× faster than
+  FAST-LIO2, ~73% faster than Faster-LIO, and best average accuracy (0.74 m
+  RMSE) in its 2025 paper. Uses an "OctVox" 8-point-per-voxel map — which also
+  directly attacks your dense-cloud problem.
+  - iG-LIO — explicitly benchmarked as more efficient than Faster-LIO with
+  comparable accuracy; GICP formulation tends to be a touch more accurate on
+  planar/structured geometry.
+  - Point-LIO — same lab as FAST-LIO/Faster-LIO, so most similar to what you
+  have. Removes in-frame distortion entirely and is exceptionally robust; speed
+  is comparable rather than dramatically better, but it's the safest "more
+  trustworthy" upgrade.
+
+  Tier 2 — GPU-accelerated (this is my recommendation for your box)
+
+  - GLIM (koide3, MIT, ROS1+ROS2) — tightly-coupled range-inertial, with
+  CUDA-accelerated scan-matching. This is the one option that breaks the
+  "constant factor" ceiling on dense clouds, because the OS-2-128's 131k-point
+  matching is exactly what the GPU eats. Your RTX 3050 Ti (4 GB) is modest but
+  plenty for GLIM's scan-matching factors. It also adds loop closure + global
+  bundle-style optimization, which is the only thing on this list that would
+  actually attack your other problem — the ~450 m yaw drift over 10 km.
+  Downside: heavier to set up than a FAST-LIO clone (CUDA toolkit, gtsam), and
+  you'd move off Docker-noetic to a CUDA image.
+
+  What none of these will fix
+
+  Your ~450 m global yaw drift is IMU-limited dead-reckoning drift, not an
+  odometry-speed problem. A faster/locally-more-accurate front end (Super-LIO,
+  iG-LIO) shaves it modestly, but the real cure is loop closure or GNSS fusion —
+  which only GLIM provides out of the box here. Your existing pole-correction +
+  GNSS anchoring already handles this downstream, so don't expect a new
+  odometry to move the global number much.
+
+  My recommendation
+
+  1. Free win first (today): bump Faster-LIO's downsampling (point_filter_num ↑,
+  coarser filter_size_surf) and re-check accuracy. On a car this likely gets
+  you to 2–3× real-time with negligible accuracy loss — no re-integration.
+  2. Best speed/accuracy CPU swap: Super-LIO — fastest of the CPU family and
+  highest accuracy, and it slots into your existing Docker/CSV workflow.
+  3. If you want to use the GPU and also tackle drift: GLIM — the only path to a
+  real order-of-magnitude speedup on dense OS-2-128, plus built-in loop
+  closure.
+
+  Given how your project is structured (you keep a
+  SPEED_AND_RELIABILITY_COMPARISON.md and run head-to-heads through the
+  identical pipeline), the natural next step is to benchmark Super-LIO and GLIM
+  the same way you did Faster-LIO vs FastReg. Want me to write this up as a doc
+  in fasterlio_integration/ and/or scaffold the Super-LIO Docker + config +
+  trajectory→CSV bridge to drop into your existing runner?
+
+  ---
+  Sources:
+  - Super-LIO (2025) · code
+  - Surfel-LIO (2025) · code
+  - iG-LIO (RA-L 2024)
+  - Point-LIO (2023)
+  - DLIO (ICRA 2023)
+  - GLIM (GPU range-inertial)
+  - FAST-LIO2 · KISS-ICP · GenZ-ICP (RA-L 2025)
+
+✻ Churned for 2m 54s
+
+※ recap: Goal is faster LiDAR odometry to replace Faster-LIO. I researched current IMU-fused options and recommended Super-LIO (CPU) or GLIM (GPU) as best swaps. Next action: benchmark one of them, or scaffold Super-LIO's Docker and CSV bridge if you want. (disable recaps in /config)
+
+❯ /exit                                                                         
+  ⎿  Goodbye!
+
+❯ /model                                                                        
+  ⎿  Set model to Opus 4.8 and saved as your default for new sessions with max
+     effort
+
+❯ ❯ start with GLIM, create a complete plan and structure along with            
+  environment for the complete pipeline.                                        
+
+● The user wants to start building the GLIM integration. Let me first study
+  exactly how the existing Faster-LIO integration is structured so I can mirror
+  its conventions, then produce a concrete plan and set up the environment.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation && echo "=== TREE (top 2 levels) ===" && find . -maxdepth 2 -not
+      -path '*/.git/*'…)
+  ⎿  === TREE (top 2 levels) ===
+     .
+     ./environment.yml
+     … +64 lines (ctrl+o to expand)
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation/fasterlio_integration && echo "=== scripts ===" && ls -la scripts/
+      && echo "" &&…)
+  ⎿  === scripts ===
+     total 60
+     drwxrwxr-x 3 gsm gsm     4096 Sep  8 22:04 .
+     … +67 lines (ctrl+o to expand)
+
+  Read 7 files (ctrl+o to expand)
+
+● Let me read the offline-benchmark path (central to the speed goal) and check
+  the local Docker/GPU tooling and GLIM specifics in parallel.
+
+  Read 2 files (ctrl+o to expand)
+
+● Bash(echo "=== docker ==="; which docker && (docker info >/dev/null 2>&1 &&
+      echo "docker OK (no sudo)" || echo "docker needs sudo"); echo "===
+      nvidia-container-toolk…)
+  ⎿  === docker ===
+     /usr/bin/docker
+     docker OK (no sudo)
+     … +17 lines (ctrl+o to expand)
+
+● Fetch(https://github.com/koide3/glim/blob/master/README.md)
+  ⎿  Received 284.1KB (200 OK)
+
+● Docker works without sudo, but nvidia-container-toolkit is not installed
+  (required for GPU-in-Docker) and the host has ROS2 Jazzy. Let me pull GLIM's
+  concrete docs (docker tags, ROS1 support, topics, TUM dump, offline mode) to
+  finalize the environment decision.
+
+● Fetch(https://koide3.github.io/glim/installation.html)
+  ⎿  Received 39.5KB (200 OK)
+
+● Fetch(https://koide3.github.io/glim/quickstart.html)
+  ⎿  Received 38.6KB (200 OK)
+
+● Let me get the exact Docker image tags from GLIM's docker page — that
+  determines the environment setup.
+
+● Fetch(https://koide3.github.io/glim/docker.html)
+  ⎿  Received 33.3KB (200 OK)
+
+● Fetch(https://github.com/koide3/glim_ros1)
+  ⎿  Received 242.1KB (200 OK)
+
+● Key finding that shapes the design: GLIM ships prebuilt Docker images for ROS2
+  Jazzy with CUDA (koide3/glim_ros2:jazzy_cuda13.1) — matching your host
+  exactly (Jazzy + driver 595 supports CUDA 13.1). But there are no ROS1 images,
+  and glim_rosbag reads ROS2 bags, so the ROS1 .bag must be converted first.
+  Two host prerequisites are missing: nvidia-container-toolkit (for --gpus all)
+  and the converted bag.
+
+  Let me confirm the bag's topics (to lock down conversion + the GNSS bridge)
+  before I build the structure.
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio && source
+      .baginspect_venv/bin/activate 2>/dev/null && python - <<'PY'
+      from rosbags.highlevel import AnyReader…)
+  ⎿  duration ~541.8s  msgs=558155
+       /gps_left_position           sensor_msgs/msg/NavSatFix          5422
+       /gps_right_position          sensor_msgs/msg/NavSatFix          5422
+     … +27 lines (ctrl+o to expand)
+
+● All topics confirmed — full bag has /ouster/points, /ouster/imu (for GLIM) and
+  /gps_left_position + /gps_right_position (for the GNSS bridge, which I can
+  reuse as-is). Before I hand-write GLIM configs, let me pull GLIM's exact JSON
+  schema (key names for topics, extrinsics, GPU/CPU selection, viewer) so the
+  overrides are correct.
+
+● Fetch(https://koide3.github.io/glim/parameters.html)
+  ⎿  Received 30.6KB (200 OK)
+
+● Fetch(https://raw.githubusercontent.com/koide3/glim/master/config/config_ros.j
+       son)
+  ⎿  Received 3.6KB (200 OK)
+
+● I now have GLIM's real config schema (imu_topic/points_topic single strings,
+  extension_modules for headless, acc_scale, enable_global_mapping). I have
+  everything needed. Let me set up task tracking and build the structure.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation && mkdir -p glim_integration/{config,docker,scripts,output} && echo
+      "created:" &&…)
+  ⎿  created:
+     glim_integration
+     glim_integration/config
+     … +3 lines (ctrl+o to expand)
+
+● Now I'll write the files. Starting with the plan document — the centerpiece.
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/PLAN.md)
+  ⎿  Wrote 191 lines to
+     Snow-pole-based-vehicle-localization/glim_integration/PLAN.md
+       2 # GLIM integration plan (GPU LiDAR-inertial odometry)
+         , a GPU-acceleratedLIO odometry front-end with **GLIM** (koide3)
+         ~1.0× real-time range-**inertial** SLAM framework, to break the 
+       5 ceiling Faster-LIO hits on the dense Ouster OS-2-128 cloud — and
+       6 get GLIM's built-in global optimisation (which can attack the ~4
+       7 50 m yaw drift).
+       8 This mirrors `fasterlio_integration/` exactly: run the LIO, dump
+       9 bridge it into `incremental_navigation_results_glim.csv` (the fi
+      10 pipeline already reads via `INCREMENTAL_NAV_CSV`), then reuse th
+         e same viz +
+     … +282 lines (ctrl+o to expand)
+
+● Now the docker provisioning scripts.
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/docker/setup_nvidi
+       a_container_toolkit.sh)
+  ⎿  Wrote 39 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/docker/setup_nvidia_container_toolkit.sh
+       2 # --------------------------------------------------------------
+       3 # One-time HOST setup: install + wire NVIDIA Container Toolkit s
+         o Docker can
+         A image.e GPU (`docker run --gpus all`). Needed for the GLIM CUD
+       5 #
+       7 #   ! sudo bash Snow-pole-based-vehicle-localization/glim_integr
+       8 #tion/docker/setup_nvidia_container_toolkit.sh
+       9 # Idempotent: safe to re-run. Verified target: Ubuntu/Mint, NVID
+      10 # RTX 3050 Ti. Does NOT touch the GPU driver (already present pe
+         r nvidia-smi).
+     … +42 lines (ctrl+o to expand)
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/docker/pull_glim.s
+       h)
+  ⎿  Wrote 23 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/docker/pull_glim.sh
+       2 # --------------------------------------------------------------
+       3 # Pull the prebuilt GLIM image. Default = CUDA build matching th
+         is host
+          works as user). driver 595 → CUDA 13.1). No sudo needed (docker
+       5 #
+       7 #   docker/pull_glim.sh cpu        # CPU-only fallback (validati
+       8 #n, NOT the speed test)
+       9 # Sizes are large (~10-15 GB). Ensure disk headroom first (see P
+      10 # --------------------------------------------------------------
+         -------------
+     … +19 lines (ctrl+o to expand)
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/docker/run_glim_do
+       cker.sh)
+  ⎿  Wrote 51 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/docker/run_glim_docker.sh
+       2 # --------------------------------------------------------------
+         -------------
+       3 # Run a command inside the GLIM container with the GPU, our conf
+       4 # whole repo mounted at /work. Mirrors fasterlio_integration/doc
+         ker/run_docker.sh.
+       5 #
+       7 #   docker/run_glim_docker.sh              # interactive shell
+       8 #
+       9 # Env overrides:
+      10 #   GLIM_IMAGE   (default koide3/glim_ros2:jazzy_cuda13.1)
+     … +54 lines (ctrl+o to expand)
+● Now the config overrides plus the extract-and-patch tooling (patches GLIM's
+  real defaults rather than hand-writing them, so we can't drift from the
+  image's schema).
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/config/overrides.j
+       son)
+  ⎿  Wrote 25 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/config/overrides.json
+       2   "__doc__": [
+          GLIM default",applied by scripts/patch_configs.py ON TOP OF the
+       4     "configs extracted from the image (scripts/01_extract_and_pa
+       5     "Each key is set wherever it appears in the target file's JS
+         ON tree, so we do",
+         e PLAN.md §4.", on the exact wrapper/nesting the image ships. Se
+         t); t in metres",is [tx,ty,tz, qx,qy,qz,qw] (R=I -> identity qua
+       8     "from Trip068.json (os_sensor->os_imu). Sub-cm: verify sign 
+       9   ],ng bring-up."
+      10   "config_ros.json": {
+     … +22 lines (ctrl+o to expand)
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/scripts/patch_conf
+       igs.py)
+  ⎿  Wrote 118 lines to Snow-pole-based-vehicle-localization/glim_integrati
+     on/scripts/patch_configs.py
+       2 """usr/bin/env python3
+         hat werenfig/overrides.json on top of the GLIM default configs t
+       4 extracted from the image. stdlib-only (runs in any python).
+       6 Strategy: for each target file, set every override key WHEREVER 
+         it appears in
+         cc_scale,tree (recursive). GLIM keys (points_topic, imu_topic, a
+         s unambiguousconfig_odometry, ...) are unique enough that this i
+       9 and, crucially, does not depend on the exact top-level wrapper t
+      10 Missing keys are reported (so we notice if the image's schema ev
+         er drifts).
+     … +124 lines (ctrl+o to expand)
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/scripts/01_extract
+       _and_patch_configs.sh)
+  ⎿  Wrote 42 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/scripts/01_extract_and_patch_configs.sh
+       2 # --------------------------------------------------------------
+       3 # Stage 01: materialise GLIM's default configs from the image, t
+         hen patch our
+         . See PLAN.md §4.des (topics, extrinsic, GPU odometry, headless)
+       5 #
+         ig (otherwise wes the container WITHOUT mounting over /glim/conf
+         our config dir,e very defaults we want to copy), copies them to 
+       8 # and chowns them back to the host user. Patching runs on the ho
+       9 # python3 (patch_configs.py is stdlib-only).
+      10 #
+     … +44 lines (ctrl+o to expand)
+
+● Let me verify the rosbags-convert CLI flags in the venv before hardcoding
+  them.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio && source
+      .baginspect_venv/bin/activate && python -c "import rosbags;
+      print('rosbags', rosbags.__version__)"; echo "--…)
+  ⎿  Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+     AttributeError: module 'rosbags' has no attribute '__version__'
+     … +40 lines (ctrl+o to expand)
+
+● rosbags-convert supports --include-topic and compression — exactly what I
+  need. Now the pipeline run scripts.
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/scripts/00_convert
+       _bag.sh)
+  ⎿  Wrote 53 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/scripts/00_convert_bag.sh
+       2 # --------------------------------------------------------------
+         -------------
+          read, keepingnvert the ROS1 dataset .bag -> a ROS2 bag GLIM can
+       4 # ONLY /ouster/points + /ouster/imu (PointCloud2/Imu are standar
+         d messages, so
+         ginspect_venvmsg definitions are needed). Uses the repo-root .ba
+       6 # (already has `rosbags`). See PLAN.md §2, §7.
+       8 #   scripts/00_convert_bag.sh [full_bag] [--force]
+       9 #
+      10 # Env:
+     … +61 lines (ctrl+o to expand)
+
+● Let me fix fragile argument parsing in that script.
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/scripts/00_conver
+        t_bag.sh)
+  ⎿  Added 6 lines, removed 2 lines
+      21  REPO="$(dirname "$INTEG")"                    # Snow-pole proje
+          ct dir
+      22  VENV="$(dirname "$REPO")/.baginspect_venv"    # repo-root venv 
+          (has rosbags)
+      23  
+      24 -BAG="${1:-$REPO/snow_pole_geo_localization_data/2024-02-28-12-5
+         -9-51.bag}"                                                     
+      25 -[ "${2:-}" = "--force" ] || [ "${1:-}" = "--force" ] && FORCE=1
+         - || FORCE=0                                                    
+      24 +# args: an optional bag path plus an optional --force, in any o
+         +rder.                                                          
+      25 +FORCE=0                                                        
+      26 +BAG="$REPO/snow_pole_geo_localization_data/2024-02-28-12-59-51.
+         +bag"                                                           
+      27 +for a in "$@"; do                                              
+      28 +  if [ "$a" = "--force" ]; then FORCE=1; else BAG="$a"; fi     
+      29 +done                                                           
+      30  DST="$INTEG/output/ros2_bag"
+      31  STORAGE="${GLIM_BAG_STORAGE:-sqlite3}"
+      32  COMPRESS="${GLIM_BAG_COMPRESS:-none}"
+
+● Now let me add an extra-mounts hook to the docker runner (needed to capture
+  GLIM's /tmp/dump trajectory), then write the run + benchmark scripts.
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/docker/run_glim_d
+        ocker.sh)
+  ⎿  Added 7 lines
+      35  
+      36  TTYFLAGS="-i"; [ -t 0 ] && [ -t 1 ] && TTYFLAGS="-it"
+      37  
+      38 +# Optional extra docker args (e.g. extra -v mounts). Word-split
+         + into an array.                                                
+      39 +EXTRA=()                                                       
+      40 +if [ -n "${GLIM_MOUNTS:-}" ]; then                             
+      41 +  # shellcheck disable=SC2206                                  
+      42 +  EXTRA=($GLIM_MOUNTS)                                         
+      43 +fi                                                             
+      44 +                                                               
+      45  # Mount X only if a display is actually available (so headless/
+          background works).
+      46  XARGS=()
+      47  if [ -n "${DISPLAY:-}" ] && [ -S /tmp/.X11-unix/X"${DISPLAY##*:
+          }" ] 2>/dev/null; then
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/docker/run_glim_d
+        ocker.sh)
+  ⎿  Added 1 line, removed 1 line
+      51  
+      52  exec $DOCKER_BIN run --rm $TTYFLAGS $GPUS \
+      53    --net=host --ipc=host --pid=host \
+      54 -  "${XARGS[@]}" \                                              
+      54 +  "${XARGS[@]}" "${EXTRA[@]}" \                                
+      55    -v "$CONFIG:/glim/config:rw" \
+      56    -v "$REPO:/work:rw" \
+      57    -w /work \
+
+● Now the GLIM run script and the throughput benchmark.
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/scripts/02_run_gli
+       m.sh)
+  ⎿  Wrote 57 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/scripts/02_run_glim.sh
+       2 # --------------------------------------------------------------
+       3 # Stage 02: run GLIM on the converted ROS2 bag, GPU-accelerated 
+         + headless, and
+         N.md §2.e the estimated trajectory (TUM) for the bridge. See PLA
+       5 #
+          dropping scans.ads the bag directly and auto-throttles to avoid
+         hat to the hostajectories to /tmp/dump on close; we bind-mount t
+       8 # so traj_lidar.txt survives the --rm container.
+      10 #   scripts/02_run_glim.sh [label]        # label defaults to "g
+         pu"
+     … +65 lines (ctrl+o to expand)
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/scripts/run_offlin
+       e_bench.sh)
+  ⎿  Wrote 27 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/scripts/run_offline_bench.sh
+       2 # --------------------------------------------------------------
+         -------------
+         d report the benchmark: run GLIM over the whole converted bag an
+       4 # real-time factor (bag_seconds / wall_seconds) plus GLIM's own 
+       5 # processing times. Directly comparable to Faster-LIO's ~1.0x in
+       6 # fasterlio_integration/SPEED_AND_RELIABILITY_COMPARISON.md.  Se
+       7 # PLAN.md §5.
+       8 #   scripts/run_offline_bench.sh [label]     # e.g. gpu, cpu
+      10 # This is just 02_run_glim.sh with timing surfaced + a parse of 
+         the log for the
+     … +26 lines (ctrl+o to expand)
+
+● Now the GLIM→CSV bridge — adapted from the proven Faster-LIO bridge, with a
+  guard for GLIM's timestamp base.
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/scripts/10_glim_tr
+       aj_to_csv.py)
+  ⎿  Wrote 233 lines to Snow-pole-based-vehicle-localization/glim_integrati
+     on/scripts/10_glim_traj_to_csv.py
+       2 """usr/bin/env python3
+       3 Stage 10 (the drop-in bridge): convert a GLIM odometry run into 
+       4 snow-pole localization pipeline already consumes
+       5 (`incremental_navigation_results.csv`), so GLIM transparently re
+       6 Faster-LIO / FastReg as the LiDAR odometry source.
+       7 
+         _to_csv.py — the fasterlio_integration/scripts/10_fasterlio_traj
+       9 alignment maths (GNSS Kabsch start-anchor into UTM33N) is identi
+      10 trajectory source (GLIM's TUM dump) and a timestamp-base guard d
+         iffer.
+     … +287 lines (ctrl+o to expand)
+
+● Now the orchestrator and README, plus a .gitignore for the heavy artifacts.
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/run_all.sh)
+  ⎿  Wrote 41 lines to
+     Snow-pole-based-vehicle-localization/glim_integration/run_all.sh
+      2 # ---------------------------------------------------------------
+        ------------
+      3 # One-shot GLIM pipeline: convert bag -> configs -> run GLIM -> b
+      4 # Assumes provisioning is done (docker/setup_nvidia_container_too
+        lkit.sh once,
+      5 # docker/pull_glim.sh). See PLAN.md §8.
+      7 #   glim_integration/run_all.sh [full_bag] [label]
+      8 # ---------------------------------------------------------------
+        ------------
+      9 set -euo pipefail
+     … +39 lines (ctrl+o to expand)
+● Write(Snow-pole-based-vehicle-localization/glim_integration/README.md)
+  ⎿  Wrote 78 lines to
+     Snow-pole-based-vehicle-localization/glim_integration/README.md
+       2 # glim_integration
+         the Faster-LIO /al odometry (GLIM) as a drop-in replacement for 
+         esstReg front-end of the snow-pole localization pipeline. Produc
+       5 `incremental_navigation_results_glim.csv` (same `easting`/`north
+       6 pipeline reads via `INCREMENTAL_NAV_CSV`). Full design + rationa
+       7 le in **PLAN.md**.
+       8 Why: Faster-LIO is CPU-bound at ~1.0× real-time on the dense OS-
+       9 moves the per-scan matching to the **RTX 3050 Ti (CUDA)** and ad
+      10 optimisation. Runs in the prebuilt `koide3/glim_ros2:jazzy_cuda1
+         3.1` image
+     … +102 lines (ctrl+o to expand)
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/output/.gitignore)
+  ⎿  Wrote 3 lines to Snow-pole-based-vehicle-localization/glim_integration
+     /output/.gitignore
+      1 # heavy GLIM artifacts — do not commit
+      2 *
+      3 !.gitignore
+
+● Now let me make the scripts executable and validate syntax (bash + python)
+  before handing off.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation/glim_integration
+      chmod +x docker/*.sh scripts/*.sh scripts/*.py run_all.sh…)
+  ⎿  === bash -n (syntax) ===
+     ok  docker/pull_glim.sh
+     ok  docker/run_glim_docker.sh
+     … +39 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to /home/gsm/Documents/Projects/Fasterlio
+
+● The self-test works. One refinement: when a key isn't found the patcher
+  appends it at top level, which could misplace it outside GLIM's glim_ros
+  wrapper. Safer to warn-only (visible, non-fatal) rather than silently
+  misplace. Let me fix that.
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/scripts/patch_con
+        figs.py)
+  ⎿  Added 4 lines, removed 3 lines
+      104          for key, val in kv.items():
+      105              hits = set_key_recursive(data, key, val)
+      106              if hits == 0:
+      107 -                print(f"[patch] WARN {fname}: key '{key}' not 
+          -found — appending at top level")                              
+      108 -                if isinstance(data, dict):                    
+      109 -                    data[key] = val                           
+      107 +                # Do NOT append: putting a key in the wrong sc
+          +ope (e.g. outside the                                         
+      108 +                # glim_ros wrapper) is silently ineffective. S
+          +urface it for a human.                                        
+      109 +                print(f"[patch] WARN {fname}: key '{key}' not 
+          +found — left unset "                                          
+      110 +                      f"(check the image's schema / key name)"
+          +)                                                             
+      111              else:
+      112                  print(f"[patch] {fname}: {key} = {json.dumps(v
+           al)}  ({hits} site(s))")
+      113          target.write_text(json.dumps(data, indent=2) + "\n")
+
+● Let me confirm the bridge's Python deps are present in the venv, check current
+  disk headroom for accurate reclaim guidance, and show the final tree.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio
+      echo "=== venv bridge deps ==="; .baginspect_venv/bin/python -c "import
+      numpy,pandas,scipy,pyproj,rosbags;print('numpy…)
+  ⎿  === venv bridge deps ===
+     numpy 2.5.2 | pandas 3.0.5 | pyproj ok | rosbags ok
+     === disk now ===
+     … +21 lines (ctrl+o to expand)
+
+● All scripts pass syntax/compile checks, the patcher self-test works, and the
+  venv already has the bridge's deps (numpy/pandas/pyproj/rosbags). Let me
+  update task status.
+
+● Let me verify the GLIM image tags actually exist on Docker Hub (cheap manifest
+  check, no full download) before recommending the pull, and record this
+  integration in memory.
+
+● Bash(for tag in jazzy_cuda13.1 jazzy humble_cuda12.2; do
+        printf "%-22s " "koide3/glim_ros2:$tag"…)
+  ⎿  koide3/glim_ros2:jazzy_cuda13.1 EXISTS
+     koide3/glim_ros2:jazzy EXISTS
+     koide3/glim_ros2:humble_cuda12.2 EXISTS
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Image tags confirmed on Docker Hub (jazzy_cuda13.1 exists). Let me add the
+  memory index pointer, then walk you through what's built.
+
+  Recalled 1 memory, wrote 1 memory (ctrl+o to expand)
+
+● The complete GLIM pipeline structure and environment tooling are built and
+  validated. Here's what's in place and the one decision I need from you.
+
+  What I built — glim_integration/ (mirrors fasterlio_integration/)
+
+  glim_integration/
+  ├── PLAN.md          ← complete plan: architecture, decisions, benchmark,
+  risks
+  ├── README.md        ← quickstart + gotchas
+  ├── config/
+  │   ├── overrides.json      our OS-2-128 overrides (topics, extrinsic, GPU
+  odom, headless)
+  │   └── (config*.json)      generated: GLIM defaults from image, then patched
+  ├── docker/
+  │   ├── setup_nvidia_container_toolkit.sh   one-time host prep (sudo)
+  │   ├── pull_glim.sh                        pull
+  koide3/glim_ros2:jazzy_cuda13.1
+  │   └── run_glim_docker.sh                  --gpus all + mounts, headless
+  ├── scripts/
+  │   ├── 00_convert_bag.sh                ROS1 .bag → ROS2 bag (points+imu)
+  │   ├── 01_extract_and_patch_configs.sh + patch_configs.py
+  │   ├── 02_run_glim.sh                   GLIM headless → TUM dump + realtime
+  factor
+  │   ├── run_offline_bench.sh             throughput benchmark
+  │   └── 10_glim_traj_to_csv.py           bridge →
+  incremental_navigation_results_glim.csv
+  ├── run_all.sh       ← chains 00→01→02→10
+  └── output/          (gitignored)
+
+  Validated now: all shell scripts pass bash -n, both Python files compile, the
+  config patcher passed a self-test, the venv already has the bridge's deps, and
+  I confirmed koide3/glim_ros2:jazzy_cuda13.1 exists on Docker Hub.
+
+  Key design decisions (details in PLAN.md)
+
+  - GLIM ships ROS2 images only (no noetic). Host is Jazzy + driver 595 → use
+  the prebuilt jazzy_cuda13.1 image, no source build. Because glim_rosbag reads
+  ROS2 bags, the ROS1 .bag is converted once (rosbags-convert, points+imu only).
+  - 4 GB VRAM → default = GPU odometry + CPU pose-graph global mapping
+  (VRAM-safe over 10 km; flippable in config).
+  - Configs aren't hand-written — I extract GLIM's real defaults from the image
+  and patch only our keys, so we can't drift from its schema.
+  - Bridge is 1:1 with the Faster-LIO one (same GNSS Kabsch start-anchor →
+  UTM33N), so nothing downstream of the CSV changes.
+
+  The one blocker + a disk reality
+
+  Two prerequisites remain, and both are heavy/privileged, so I want your call
+  before triggering them:
+  - nvidia-container-toolkit is not installed → the GPU-in-Docker step needs 
+  sudo (only you can run it).
+  - Disk is at 87% (61 GB free); provisioning adds ~12 GB (image) + ~33 GB
+  (converted bag) → ~16 GB free after. Reclaiming
+  fasterlio_integration/output/fasterlio_odometry.bag (1.2 GB) helps a little.
+● User answered Claude's questions:
+  ⎿  · How should I proceed with GLIM provisioning? (The 
+     nvidia-container-toolkit step needs sudo — you'll run that one via `! sudo 
+     bash …/setup_nvidia_container_toolkit.sh` regardless.) → Pull image + 
+     convert bag now
+
+● Starting both non-sudo heavy steps in the background now. You can run the sudo
+  toolkit step in parallel.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation && bash glim_integration/docker/pull_glim.sh gpu 2>&1 | tee
+      glim_integration/outp…)
+  ⎿  Running in the background (↓ to manage)
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation && bash glim_integration/scripts/00_convert_bag.sh 2>&1 | tee
+      glim_integration/ou…)
+  ⎿  Running in the background (↓ to manage)
+
+● Both are running in the background. Let me do a quick sanity check that
+  neither immediately errored (bad flag, auth, etc.).
+
+● Bash(sleep 8; echo "=== convert (interim) ==="; tail -n 15
+      /tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-46d3
+      -b798-f3b3ff1e8095/tasks/b3epib3…)
+  ⎿  === convert (interim) ===
+     [00] disk before:
+     Filesystem               Size  Used Avail Use% Mounted on
+     … +17 lines (ctrl+o to expand)
+
+● Both background jobs are healthy and progressing:
+  - Image pull — downloading layers, no auth errors.
+  - Bag conversion — reading the bag, writing output/ros2_bag/ (sqlite3,
+  points+imu). Disk shows 60 GB free at start.
+
+  I'll be notified automatically when each finishes — no need to poll.
+
+  Your one step (in parallel, needs sudo)
+
+  Run this in the session so the password prompt is visible:
+
+  ! sudo bash Snow-pole-based-vehicle-localization/glim_integration/docker/setup
+  _nvidia_container_toolkit.sh
+
+  It installs nvidia-container-toolkit, wires it into Docker, restarts the
+  daemon, and smoke-tests nvidia-smi inside a container (using an image you
+  already have locally, so no extra download).
+
+  What happens next (once all three are done)
+
+  When the pull + conversion finish and the toolkit is in, I'll run the rest
+  end-to-end:
+  1. 01_extract_and_patch_configs.sh — pull GLIM's real configs from the image,
+  patch in the OS-2-128 topics/extrinsic/GPU-odometry/headless settings
+  2. 02_run_glim.sh — GLIM on the GPU, headless → TUM trajectory + real-time 
+  factor (the headline speed number vs Faster-LIO's ~1.0×)
+  3. 10_glim_traj_to_csv.py — bridge to incremental_navigation_results_glim.csv
+
+  run_all.sh chains those (it'll skip the already-done conversion). Then we feed
+  the CSV through the identical snow-pole pipeline + GNSS sweep to produce
+  GLIM_VS_FASTERLIO_COMPARISON.md.
+
+  I'll pick back up automatically when the background jobs report in. If the
+  toolkit smoke-test fails for you, paste the output and I'll sort it.
+
+✻ Cogitated for 18m 46s
+
+● Background command "Pull GLIM CUDA image (background)" completed (exit code 0)
+
+● Image pull finished (exit 0). Let me confirm the image is present and check on
+  the conversion.
+
+● Bash(echo "=== pull result (tail) ==="; tail -n 5
+      /tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-46d3
+      -b798-f3b3ff1e8095/tasks/b9gqiapnj.output…)
+  ⎿  === pull result (tail) ===
+     Status: Downloaded newer image for koide3/glim_ros2:jazzy_cuda13.1
+     docker.io/koide3/glim_ros2:jazzy_cuda13.1
+     … +16 lines (ctrl+o to expand)
+
+● Status update:
+
+  - ✅ Image pulled — koide3/glim_ros2:jazzy_cuda13.1 (14.4 GB on disk) is
+  present and ready.
+  - ⏳ Conversion — ~28 GB written so far (of ~33 GB expected), so it's ~85%
+  done. Disk is now 17 GB free (97% used) — tight but on track to land around
+  ~10–12 GB free.
+
+  ⚠️ Heads-up on disk: 97% is snug. It should finish fine, but after the GLIM 
+  run we should delete glim_integration/output/ros2_bag/ (~33 GB) to recover —
+  I've noted that in the plan. If the conversion does hit a disk-full error,
+  I'll handle it (switch to lz4 compression on the bag, or we reclaim the
+  root-owned fasterlio_odometry.bag with sudo).
+
+  Reminder — you can run the sudo toolkit step now in parallel if you haven't:
+  ! sudo bash Snow-pole-based-vehicle-localization/glim_integration/docker/setup
+  _nvidia_container_toolkit.sh
+
+  I'll continue automatically when the conversion reports in — no polling
+  needed. Once it's done (and the toolkit is in), I'll run configs → GLIM →
+  bridge.
+
+✻ Cooked for 46s
+
+● Background command "Convert ROS1 bag to ROS2 (background)" completed (exit
+code 0)
+
+● Conversion finished (exit 0). Let me verify the converted bag is valid
+  (correct message counts) and check whether the GPU-in-Docker toolkit is ready
+  yet.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio
+      echo "=== conversion tail ==="; tail -n 8 /tmp/claude-1000/-home-gsm-Docum
+      ents-Projects-Fasterlio/3eeb1dd4-34f3-46d3-b…)
+  ⎿  === conversion tail ===
+     /dev/mapper/vgmint-root  467G  383G   60G  87% /
+     [00] converting /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based
+     … +17 lines (ctrl+o to expand)
+
+● Conversion verified — exact match to the source: /ouster/points 5419,
+  /ouster/imu 54202, 541.7 s. The ROS2 bag is 32 GB (disk at 16 GB free).
+
+  The GPU toolkit isn't installed yet (--gpus all still fails), so the GLIM run
+  (stage 02) is blocked on your sudo step. But stage 01 (extract + patch
+  configs) doesn't need the GPU — let me run that now to make progress.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation && bash glim_integration/scripts/01_extract_and_patch_configs.sh
+      2>&1 | tee glim_…)
+  ⎿  [01] extracting default configs from koide3/glim_ros2:jazzy_cuda13.1 -
+     > /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-local
+     ization/glim_integration/config
+     cp: cannot stat '/glim/config/.': No such file or directory
+
+● The image's config isn't at /glim/config (that's just the suggested mount
+  point). Let me find where GLIM's default configs actually live in the image.
+
+● Bash(docker run --rm koide3/glim_ros2:jazzy_cuda13.1 bash -lc '
+        echo "=== find config_ros.json ==="; find / -name "config_ros.json"
+      2>/dev/null…)
+  ⎿  === find config_ros.json ===
+     /root/ros2_ws/src/glim/config/config_ros.json
+     /root/ros2_ws/install/glim/share/glim/config/config_ros.json
+     … +6 lines (ctrl+o to expand)
+
+● Found them — GLIM's configs are at /root/ros2_ws/src/glim/config (and the
+  installed copy), not /glim/config. Let me fix the extraction to search the
+  real locations.
+● Update(Snow-pole-based-vehicle-localization/glim_integration/scripts/01_extrac
+        t_and_patch_configs.sh)
+  ⎿  Added 9 lines, removed 1 line
+      28      -v "$REPO:/work:rw" \
+      29      "$IMAGE" bash -lc '
+      30        set -e
+      31 -      cp -a /glim/config/. /work/glim_integration/config/      
+      31 +      SRC=""                                                   
+      32 +      for d in /root/ros2_ws/src/glim/config \                 
+      33 +               /root/ros2_ws/install/glim/share/glim/config \  
+      34 +               /glim/config; do                                
+      35 +        [ -d "$d" ] && SRC="$d" && break                       
+      36 +      done                                                     
+      37 +      [ -n "$SRC" ] || { echo "no GLIM config dir found in imag
+         +e" >&2; exit 1; }                                              
+      38 +      echo "[01] source config dir in image: $SRC"             
+      39 +      cp -a "$SRC"/. /work/glim_integration/config/            
+      40        chown -R "$HOST_UID:$HOST_GID" /work/glim_integration/con
+          fig
+      41      '
+      42  else
+
+● Bash(bash glim_integration/scripts/01_extract_and_patch_configs.sh 2>&1 | tee
+      glim_integration/output/_configs.log)
+  ⎿  [01] extracting default configs from koide3/glim_ros2:jazzy_cuda13.1 -
+     > /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-local
+     ization/glim_integration/config
+     … +38 lines (ctrl+o to expand)
+
+● All 9 overrides applied cleanly (each at exactly 1 site, no warnings —
+  confirming the image's schema matches our keys). Let me verify the key patched
+  files look right and check whether sub-mapping also defaults to GPU (a VRAM
+  concern on 4 GB).
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation/glim_integration/config
+      echo "=== config.json (module selection) ==="; cat config…)
+  ⎿  === config.json (module selection) ===
+     {
+       "global": {
+     … +25 lines (ctrl+o to expand)
+
+● Two things confirmed: T_lidar_imu patched correctly (7-element [t, quat]), and
+  config_ros.json is right. But config.json also selects
+  config_sub_mapping_gpu.json — a second GPU consumer. On 4 GB VRAM, the safe
+  choice is to keep the speed-critical odometry on GPU but move sub-mapping to
+  CPU (it runs asynchronously and doesn't affect the odometry real-time factor).
+  Let me add that override and re-patch.
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/config/overrides.
+        json)
+  ⎿  Added 1 line
+      20    },
+      21    "config.json": {
+      22      "config_odometry": "config_odometry_gpu.json",
+      23 +    "config_sub_mapping": "config_sub_mapping_cpu.json",       
+      24      "config_global_mapping": "config_global_mapping_pose_graph.
+          json"
+      25    }
+      26  }
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation/glim_integration
+      python3 scripts/patch_configs.py --config-dir config --overrides…)
+  ⎿  [patch] config_ros.json: enable_global_mapping = true  (1 site(s))
+     [patch] config.json: config_odometry = "config_odometry_gpu.json"  (1
+     site(s))
+     … +8 lines (ctrl+o to expand)
+
+● Config is now locked in for the 4 GB GPU: odometry on GPU (the speed-critical
+  part), sub-mapping + global-mapping on CPU (VRAM-safe). Let me update the
+  memory with current provisioning state.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Everything that doesn't need the GPU is now done and verified. Here's where we
+  stand:
+
+  Provisioning status
+
+  ┌──────────────────────────────────┬──────────────────────────────────────┐
+  │               Step               │                Status                │
+  ├──────────────────────────────────┼──────────────────────────────────────┤
+  │ Pull                             │ ✅ done (14.4 GB)                    │
+  │ koide3/glim_ros2:jazzy_cuda13.1  │                                      │
+  ├──────────────────────────────────┼──────────────────────────────────────┤
+  │ Convert ROS1→ROS2 bag            │ ✅ done — 32 GB, verified exact      │
+  │ (points+imu)                     │ counts (5419 pts / 54202 imu, 541.7  │
+  │                                  │ s)                                   │
+  ├──────────────────────────────────┼──────────────────────────────────────┤
+  │                                  │ ✅ done — GPU odometry, CPU          │
+  │ Extract + patch GLIM configs     │ sub/global mapping (4 GB-safe),      │
+  │                                  │ OS-2-128 topics + extrinsic          │
+  ├──────────────────────────────────┼──────────────────────────────────────┤
+  │ Install nvidia-container-toolkit │ ⛔ needs your sudo — docker run      │
+  │                                  │ --gpus all still fails               │
+  ├──────────────────────────────────┼──────────────────────────────────────┤
+  │ Run GLIM + bridge to CSV         │ ⏸ waiting on the toolkit             │
+  └──────────────────────────────────┴──────────────────────────────────────┘
+
+  The one command left (needs sudo)
+
+  Run it in the session so the password prompt shows:
+  !  sudo bash Snow-pole-based-vehicle-localization/glim_integration/docker/setu
+  p_nvidia_container_toolkit.sh
+  It installs the toolkit, wires it into Docker, restarts the daemon, and
+  smoke-tests nvidia-smi in a container (no extra download).
+
+  When it prints [toolkit] OK — GPU is visible inside Docker, just tell me (or
+  say "go") and I'll immediately run the rest:
+  glim_integration/run_all.sh      # skips the (done) conversion → GLIM on GPU →
+  CSV
+  which gives us the headline real-time factor vs Faster-LIO's ~1.0×, plus
+  incremental_navigation_results_glim.csv to push through the pipeline + GNSS
+  sweep.
+
+  ⚠️ Disk is at 16 GB free (97%) — fine for the run itself (GLIM's outputs are
+  small), but we should delete output/ros2_bag/ (32 GB) once the run succeeds.
+
+  One note in case the smoke-test fails: driver 595 supports CUDA 13.1, so if
+  the GPU still isn't visible after the script, it's almost always that the
+  Docker daemon didn't pick up the new runtime — a re-run of the script (or sudo
+  systemctl restart docker) usually fixes it. Paste any error and I'll debug.
+
+✻ Brewed for 3m 0s
+
+❯ go,                                                                           
+
+● Let me verify the GPU is now visible inside Docker before kicking off the run.
+
+● Bash(echo "=== toolkit installed? ==="; dpkg -l 2>/dev/null | grep -q
+      nvidia-container-toolkit && echo "INSTALLED" || echo "NOT installed"
+      echo "=== GPU visible in G…)
+  ⎿  === toolkit installed? ===
+     NOT installed
+     === GPU visible in GLIM container? ===
+     … +4 lines (ctrl+o to expand)
+
+● The toolkit still isn't installed and --gpus all still fails — so the sudo
+  step hasn't gone through yet. Let me check whether I can run it for you
+  (passwordless sudo); if so I'll just do it.
+
+● Bash(if sudo -n true 2>/dev/null; then echo "SUDO_OK: passwordless sudo
+      available"; else echo "SUDO_NEEDS_PASSWORD"; fi)
+  ⎿  SUDO_NEEDS_PASSWORD
+
+● Ah — I can't run it for you: sudo needs a password, and I can only run
+  non-interactive commands (a password prompt from my tool would just fail).
+  This one step has to come from your session, where the prompt can actually
+  accept your password.
+
+  Please paste this line into the prompt (the leading ! runs it in your shell,
+  so the password prompt works):
+
+  ! sudo bash Snow-pole-based-vehicle-localization/glim_integration/docker/setup
+  _nvidia_container_toolkit.sh
+
+  You'll see it install the toolkit, reconfigure Docker, restart the daemon, and
+  finish with either:
+  - [toolkit] OK — GPU is visible inside Docker. ✅ → say go and I'll run the
+  full GLIM pipeline immediately, or
+  - an error → paste it and I'll debug.
+
+  Everything else is already staged (image, converted+verified bag, patched GPU
+  config), so the moment the GPU is visible in Docker we go straight to the run
+  and the real-time-factor number.
+
+✻ Worked for 36s
+
+! sudo bash Snow-pole-based-vehicle-localization/glim_integration/docker/setup_ 
+ nvidia_container_toolkit.sh                                                    
+  ⎿  sudo: a terminal is required to read the password; either use the -S option
+     to read from standard input or configure an askpass helper
+     sudo: a password is required
+
+
+❯ go                                                                            
+
+● That error is the key: Claude Code's ! doesn't attach a real terminal, so sudo
+  has nowhere to read your password from. It's not a problem with the script —
+  it just can't run through !.
+
+  Fix: run it in a normal terminal window (GNOME Terminal / your terminal app,
+  outside Claude Code). Copy-paste this (absolute path, so no cd needed):
+
+  sudo bash /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-local
+  ization/glim_integration/docker/setup_nvidia_container_toolkit.sh
+
+  It ends with [toolkit] OK — GPU is visible inside Docker. Then come back and
+  say go, and I'll run the GPU pipeline + get the real-time-factor number.
+
+  ---
+  Meanwhile, I genuinely can't move the GPU run forward without that toolkit —
+  but I can do one useful thing if you want it: a CPU-mode validation run of the
+  whole GLIM pipeline (GLIM reads the converted bag → trajectory → bridge →
+  ..._glim.csv). That proves config/bag/bridge are all correct end-to-end, so
+  once the GPU is enabled the only variable left is speed. It's slower (CPU on
+  the dense cloud, maybe 15–40 min) and I'd run it in the background.
+
+  Want me to kick off that CPU validation while you open the terminal? Say "yes,
+  cpu" — otherwise I'll just wait for the toolkit and go straight to the GPU
+  run.
+
+✻ Sautéed for 1m 28s
+
+❯ [toolkit] OK — GPU is visible inside Docker.                                  
+● GPU is live in Docker. Let me update tracking and launch the full GPU run.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation && bash glim_integration/scripts/02_run_glim.sh gpu 2>&1 | tee
+      glim_integration/o…)
+  ⎿  Running in the background (↓ to manage)
+
+● Launched. This is a first GPU run with real failure modes (CUDA init, 4 GB
+  OOM, config parsing, trajectory dump), so let me watch the startup closely
+  rather than wait blind.
+
+● Bash(sleep 25; echo "=== _run_gpu.log (startup) ==="; cat
+      /tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-46d3
+      -b798-f3b3ff1e8095/tasks/bp82uq38…)
+  ⎿  Error: Blocked: sleep 25 followed by: echo "=== _run_gpu.log (startup) ==="
+     cat /tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-
+     46d3-b798-f3b3ff1e8095/tasks/bp82uq38m.output tail -n 40. To wait for a 
+     condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2;
+     done`). To wait for a command you started, use run_in_background: true. Do
+     not chain shorter sleeps to work around this block.
+
+● Foreground sleep is blocked. Let me read the log directly to see current
+  startup state.
+
+  Read 1 file (ctrl+o to expand)
+
+● GLIM is running successfully on the GPU — and the early signal is exactly what
+  we hoped for:
+
+  load libodometry_estimation_gpu.so        ← GPU odometry active
+  load libglobal_mapping_pose_graph.so      ← CPU pose-graph (4GB-safe)
+  topics: /ouster/imu, /ouster/points       ← config correct
+  Opened ros2_bag.db3 (sqlite3)             ← bag read OK
+  initial IMU state estimation result        ← IMU init OK
+  playback speed: 2.494x                     ← ~2.5× real-time
+
+  Key takeaways from startup:
+  - No 4 GB OOM — GPU odometry initialized fine on the RTX 3050 Ti.
+  - ~2.5× real-time already vs Faster-LIO's ~1.0× — that's the speedup we came
+  for, and it's still the early running average.
+  - Two warnings (submap_target_num_points, playback_speed defaults) are benign
+  — playback_speed=100 just means glim_rosbag runs as fast as processing allows,
+  so "2.494×" is the achieved throughput.
+
+  It's processing the full 541.8 s bag now (~3–5 min wall at this rate). I'll be
+  notified when it finishes; the remaining watch-item is whether GLIM
+  auto-dumps traj_lidar.txt to /tmp/dump (my script checks and will flag if
+  not). Once it lands, I'll run the bridge →
+  incremental_navigation_results_glim.csv and report the final real-time factor.
+  Sitting tight until it completes.
+
+✻ Sautéed for 1m 17s
+
+※ recap: GLIM GPU odometry is running to replace Faster-LIO and speed up the pipeline, currently processing the bag at about 2.5x real-time versus 1.0x before. Next I'll confirm it finishes and dumps the trajectory, then bridge it to the CSV. (disable recaps in /config)
+
+❯ taking too much time, check if everything is fine?                            
+
+● Let me check on it right now.
+
+● Bash(echo "=== last 25 lines of GLIM run log ==="; tail -n 25
+      /tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-46d3
+      -b798-f3b3ff1e8095/tasks/bp82…)
+  ⎿  === last 25 lines of GLIM run log ===
+     [2026-09-09 16:08:35.491] [odom] [warning] No-IMU errors rot=0.220 +-
+     0.229 deg, trans=0.064 +- 0.046 m, vel=0.177 +- 0.118 m/s
+     … +36 lines (ctrl+o to expand)
+
+● The container is still up but GPU is idle (0%) and the log looks stalled at
+  16:08:43 — I need to tell whether it's still working or hung. Let me get hard
+  signals.
+
+● Bash(CID=$(docker ps -q --filter ancestor=koide3/glim_ros2:jazzy_cuda13.1 |
+      head -1)
+      echo "container: $CID"…)
+  ⎿  container: 436fd40b6fdd
+     === StartedAt vs now ===
+     2026-09-09T16:05:17.464403076Z
+     … +25 lines (ctrl+o to expand)
+
+● Now it's clear. Hard data:
+  - Container has run ~29 min, but GLIM's log stopped at 16:08:43 (~26 min ago).
+  - 6.6% CPU, 0% GPU — it is not computing.
+
+  This isn't a hang in processing — GLIM finished the bag in ~3.5 min (hitting
+  ~2.3–2.9× real-time) and is now idle, waiting for a shutdown signal. That's
+  glim_rosbag's default: after playback it keeps spinning (normally so you can
+  inspect the viewer), and it only dumps the trajectory to /tmp/dump on SIGINT.
+  Since we run headless, nothing sent that signal — so it's been sitting there
+  and the dump dir is empty. My script waits for the process, so it looks stuck.
+
+  Fix: send SIGINT so GLIM saves and exits. Let me load the Monitor tool and do
+  it.
+
+● Bash(CID=$(docker ps -q --filter ancestor=koide3/glim_ros2:jazzy_cuda13.1 |
+      head -1)
+      echo "sending SIGINT to $CID"; docker kill --signal=INT "$CID"…)
+  ⎿  sending SIGINT to 436fd40b6fdd
+     436fd40b6fdd
+     sent.
+● SIGINT sent. My original run script waits on GLIM, so it should now proceed to
+  dump + finish on its own. Let me confirm the signal triggered a graceful save
+  rather than being ignored.
+
+● Bash(L=/tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-4
+      6d3-b798-f3b3ff1e8095/tasks/bp82uq38m.output
+      echo "=== new log tail after SIGINT ===";…)
+  ⎿  === new log tail after SIGINT ===
+     [2026-09-09 16:08:38.449] [odom] [warning] IMU validation results:
+     [2026-09-09 16:08:38.449] [odom] [warning] num_validations=5184
+     … +27 lines (ctrl+o to expand)
+
+● SIGINT to the container's PID 1 was swallowed by the ros2 run wrapper — GLIM
+  is still up and hasn't dumped. Let me send the signal directly to the actual
+  glim_rosbag process inside the container.
+
+● Bash(CID=$(docker ps -q --filter ancestor=koide3/glim_ros2:jazzy_cuda13.1 |
+      head -1)
+      echo "=== processes in container ==="; docker exec "$CID" bash -lc 'ps -eo
+      pid,c…)
+  ⎿  === processes in container ===
+      694652 bash            /bin/bash -c source /home/gsm/.claude/shell-sn
+     apshots/snapshot-bash-1788967167040-g4qg72.sh 2>/dev/null || true && s
+     … +24 lines (ctrl+o to expand)
+
+● The --pid=host in my run script makes ps show host PIDs and confused pkill.
+  The glim_rosbag binary is PID 694873. Let me signal it precisely by its
+  process name (avoids matching the ros2 wrapper or pkill itself).
+
+● Bash(CID=$(docker ps -q --filter ancestor=koide3/glim_ros2:jazzy_cuda13.1 |
+      head -1)
+      docker exec "$CID" bash -lc '…)
+  ⎿  Error: Exit code 1
+     invalid container name or ID: value is empty
+
+● Background command "Run GLIM on GPU headless (background)" completed (exit code 0)
+
+● The container exited and the run job completed with exit code 0 — meaning the
+  SIGINT reached glim_rosbag, it dumped the trajectory, and my script harvested
+  it (it exits 0 only when traj_lidar.txt is found). Let me confirm the results.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      L=/tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-46
+      d3-b798…)
+  ⎿  === tail of run (realtime factor + dump harvest) ===
+     [2026-09-09 16:08:41.344] [odom] [warning] No-IMU errors rot=0.220 +-
+     0.226 deg, trans=0.065 +- 0.046 m, vel=0.178 +- 0.118 m/s
+     … +373 lines (ctrl+o to expand)
+
+● Everything worked — GLIM produced a full trajectory (5407 poses, sensor-clock
+  timestamps, factor graph + submaps all saved). But I have to correct one
+  number: the REALTIME_FACTOR=0.29x my script printed is wrong — it's a
+  measurement artifact.
+
+  Here's what actually happened: GLIM processed the whole bag in ~3.4 minutes
+  (16:05:19→16:08:43), then — because glim_rosbag doesn't auto-quit headless —
+  sat idle for 26 minutes waiting for the SIGINT I eventually sent. My script
+  timed the whole wall-clock (1876 s), so it divided by the idle time too.
+  GLIM's own reported throughput during processing was 2.3–2.9×. Let me compute
+  the true factor from the log timestamps and run the bridge.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      L=/tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-46
+      d3-b798…)
+  ⎿  === TRUE realtime factor (exclude the idle-wait-for-SIGINT) ===
+       processing span   = 204.8s for a 541.8s bag
+       TRUE realtime factor = 2.65x   (Faster-LIO was ~1.0x)
+     … +14 lines (ctrl+o to expand)
+
+● This is the real result:
+
+  - ✅ GLIM on GPU = 2.65× real-time (204.8 s to process a 541.8 s bag), vs
+  Faster-LIO's ~1.0× — a ~2.6× speedup on your 4 GB laptop GPU. GLIM's own
+  playback samples (avg ~2.6×) confirm it.
+  - ✅ Trajectory (5407 poses) → incremental_navigation_results_glim.csv
+  written.
+  - ⚠️ Raw odometry-vs-GNSS drift: median 450 m — essentially identical to
+  Faster-LIO's ~450 m global drift (the poles + GNSS correct this downstream;
+  the fair metric is pole-corrected error, next).
+
+  Two things to sort: I need to (1) fix the 26-min idle hang so reruns are
+  clean, and (2) run the pipeline for the pole-corrected accuracy. Let me check
+  a few things at once — the auto_quit param, the pipeline env, and disk.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      echo "=== does glim_rosbag support auto_quit? ==="…)
+  ⎿  === does glim_rosbag support auto_quit? ===
+     /root/ros2_ws/src/glim_ros2/src/glim_ros/glim_ros.cpp
+     /root/ros2_ws/src/glim_ros2/src/glim_rosbag.cpp
+     … +12 lines (ctrl+o to expand)
+
+● auto_quit is supported and polegeo env is present. Let me check exactly what
+  auto_quit does (does it still save the trajectory?) before wiring it in.
+
+● Bash(docker run --rm koide3/glim_ros2:jazzy_cuda13.1 bash -lc 'sed -n "1,120p"
+      /root/ros2_ws/src/glim_ros2/src/glim_rosbag.cpp' 2>&1 | grep -n -iE
+      'auto_quit|save|du…)
+  ⎿  23:#include <glim/util/extension_module_ros2.hpp>
+     69:    saved_termios_ = original;
+     82:      tcsetattr(STDIN_FILENO, TCSANOW, &saved_termios_);
+
+● Bash(docker run --rm koide3/glim_ros2:jazzy_cuda13.1 bash -lc 'grep -n -iE
+      "auto_quit|save|dump|glim->wait|shutdown|/tmp/dump"
+      /root/ros2_ws/src/glim_ros2/src/glim_r…)
+  ⎿  69:    saved_termios_ = original;
+     82:      tcsetattr(STDIN_FILENO, TCSANOW, &saved_termios_);
+     133:  static struct termios saved_termios_;
+     … +11 lines (ctrl+o to expand)
+
+● Now I understand glim_rosbag fully: line 442 waits for a keyboard press when
+  auto_quit=false (our hang), but line 448 glim->save() runs unconditionally
+  after. So -p auto_quit:=true skips the keyboard wait, processes to completion,
+  saves, and exits cleanly — the proper fix. Let me wire that in and make the
+  timing log-based so it's honest even if a container lingers.
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/scripts/02_run_gl
+        im.sh)
+  ⎿  Added 24 lines, removed 2 lines
+      34  rm -rf "$DUMP_HOST"; mkdir -p "$DUMP_HOST"
+      35  
+      36  echo "[02] running GLIM (label=$LABEL) on $BAG_IN — headless, -
+          -gpus all" | tee "$LOG"
+      37 +# auto_quit:=true is ESSENTIAL: glim_rosbag otherwise blocks on
+         + a keyboard press                                              
+      38 +# after playback (headless => hangs forever). With auto_quit it
+         + processes to the                                              
+      39 +# end, saves to /tmp/dump, and exits. (glim_rosbag.cpp: wait(au
+         +to_quit); save().)                                             
+      40  t0=$(date +%s)
+      41  GLIM_MOUNTS="-v $DUMP_HOST:/tmp/dump:rw" \
+      42    "$INTEG/docker/run_glim_docker.sh" \
+      43      ros2 run glim_ros glim_rosbag "$BAG_IN" \
+      41 -      --ros-args -p config_path:=/glim/config 2>&1 | tee -a "$L
+         -OG"                                                            
+      44 +      --ros-args -p config_path:=/glim/config -p auto_quit:=tru
+         +e 2>&1 | tee -a "$LOG"                                         
+      45  t1=$(date +%s); WALL=$((t1 - t0))
+      46  
+      47 +# Report the TRUE throughput from GLIM's own processing timesta
+         +mps (span from the                                             
+      48 +# first to the last processing log line, ignoring any >60s idle
+         + gap), which is                                                
+      49 +# robust even if the container lingers. Wall-clock is kept as a
+         + secondary figure.                                             
+      50  echo "[02] wall-clock ${WALL}s for a ${BAG_SECONDS}s bag" | tee
+           -a "$LOG"
+      45 -awk -v w="$WALL" -v b="$BAG_SECONDS" 'BEGIN{ if (w>0) printf "[
+         -02] REALTIME_FACTOR=%.2fx (bag/wall)\n", b/w }' | tee -a "$LOG"
+      51 +python3 - "$LOG" "$BAG_SECONDS" <<'PY' | tee -a "$LOG"         
+      52 +import re, sys, datetime                                       
+      53 +log, bag = sys.argv[1], float(sys.argv[2])                     
+      54 +ts = []                                                        
+      55 +for line in open(log):                                         
+      56 +    m = re.match(r'\[(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+)\] \[
+         +(odom|glim|local|global)\]', line)                             
+      57 +    if m: ts.append(datetime.datetime.fromisoformat(m.group(1))
+         +)                                                              
+      58 +if len(ts) < 2:                                                
+      59 +    print("[02] REALTIME_FACTOR=NA (no processing timestamps in
+         + log)"); sys.exit()                                            
+      60 +proc = [ts[0]]                                                 
+      61 +for a, b in zip(ts, ts[1:]):                                   
+      62 +    if (b - a).total_seconds() > 60: break                     
+      63 +    proc.append(b)                                             
+      64 +span = (proc[-1] - proc[0]).total_seconds()                    
+      65 +if span > 0:                                                   
+      66 +    print(f"[02] processing span {span:.1f}s -> REALTIME_FACTOR
+         +={bag/span:.2f}x (bag/processing)")                            
+      67 +PY                                                             
+      68  
+      69  # Harvest the trajectory dump (GLIM writes TUM: timestamp x y z
+           qx qy qz qw).
+      70  if [ -f "$DUMP_HOST/traj_lidar.txt" ]; then
+
+● Fix is in — future runs will exit cleanly instead of hanging. Let me record
+  results in memory and check the pipeline's expected env vars before launching
+  the accuracy comparison.
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      echo "=== env vars the main pipeline reads ==="; grep -nE
+      "os\.environ|getenv" sn…)
+  ⎿  === env vars the main pipeline reads ===
+     32:model = load_custom_model('./model/pole_best_signal.pt', confidence
+     _threshold=0.6, backend=os.environ.get('MPL_BACKEND', 'TkAgg')) # set
+     … +18 lines (ctrl+o to expand)
+
+● The pipeline uses the reduced bag (lidar images + GNSS) by default and reads
+  INCREMENTAL_NAV_CSV, with RESULTS_CSV/MAP_FIG overridable — so I'll point
+  outputs at GLIM-specific files to avoid clobbering the Faster-LIO ones.
+  Launching the accuracy run (background, ~2 min) and recording results in
+  memory.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      env -u PYTHONPATH MPL_BACKEND=Agg \…)
+  ⎿  Running in the background (↓ to manage)
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● The accuracy run is going in the background. Let me fix a now-stale line in
+  memory and confirm the pipeline started cleanly (loaded the model, accepted
+  the GLIM CSV).
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Bash(sleep 1; tail -n 20 /tmp/claude-1000/-home-gsm-Documents-Projects-Fasterl
+      io/3eeb1dd4-34f3-46d3-b798-f3b3ff1e8095/tasks/bmafireyp.output
+      2>/dev/null)
+  ⎿  /home/gsm/miniconda3/envs/polegeo/lib/python3.9/site-packages/pyproj/c
+     rs/crs.py:141: FutureWarning: '+init=<authority>:<code>' syntax is dep
+     recated. '<authority>:<code>' is the preferred initialization method.
+     … +20 lines (ctrl+o to expand)
+
+● Yes — everything is fine. The delay was not a GLIM problem, and I've fixed the
+  cause. Here's the honest picture:
+
+  What the "too much time" actually was
+
+  GLIM finished the odometry in 3.4 minutes. Then it sat idle for 26 minutes
+  because glim_rosbag, run headless, blocks waiting for a keyboard press before
+  it saves (confirmed in its source: if(!auto_quit) wait_for_key; … save()).
+  Nothing was wrong — it was done and waiting. I sent it the shutdown signal, it
+  saved, and I've now wired auto_quit:=true into the run script so future runs
+  process → save → exit on their own. No more hangs.
+
+  The real results
+
+  ┌────────────┬─────────────┬──────────────────────────────────────────────┐
+  │   Metric   │ Faster-LIO  │                  GLIM (GPU)                  │
+  ├────────────┼─────────────┼──────────────────────────────────────────────┤
+  │ Throughput │ ~1.0×       │ 2.65× real-time (204.8 s for a 541.8 s bag)  │
+  │            │ real-time   │                                              │
+  ├────────────┼─────────────┼──────────────────────────────────────────────┤
+  │ 4 GB VRAM  │ n/a         │ ✅ no OOM (GPU odometry + CPU sub/global     │
+  │            │             │ mapping)                                     │
+  ├────────────┼─────────────┼──────────────────────────────────────────────┤
+  │ Trajectory │ —           │ 5407 poses →                                 │
+  │            │             │ incremental_navigation_results_glim.csv ✅   │
+  └────────────┴─────────────┴──────────────────────────────────────────────┘
+
+  That's the ~2.6× odometry speedup you were after, on the laptop's RTX 3050 Ti.
+  (The 0.29× my script first printed was bogus — it had divided by the 26-min
+  idle wait; the real number comes from GLIM's own per-scan timestamps.)
+
+  Two honest caveats
+
+  - Raw odometry-vs-GNSS drift is median ~450 m — the same ballpark as 
+  Faster-LIO. GLIM also logged that the low-grade Ouster built-in IMU helps
+  rotation but not translation ("IMU prediction is not good"), so its
+  tight-fusion edge is partly blunted by that sensor. As with Faster-LIO, the
+  drift gets corrected downstream by the poles + GNSS, so the fair metric is
+  pole-corrected error.
+  - That pole-corrected accuracy run is executing right now (YOLO loaded,
+  reading the bag) — ~2 min. When it lands I'll report GLIM's pole-corrected
+  median/mean/max next to Faster-LIO's (8.6 m median) so we know whether the
+  2.6× speedup costs any accuracy.
+
+  I'll report the moment it finishes.
+
+✻ Sautéed for 11m 9s
+
+● Background command "Run snow-pole pipeline with GLIM CSV (background)"
+completed (exit code 0)
+
+● Pipeline finished (exit 0). Let me pull the pole-corrected accuracy numbers.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      L=/tmp/claude-1000/-home-gsm-Documents-Projects-Fasterlio/3eeb1dd4-34f3-46
+      d3-b798…)
+  ⎿  === error / accuracy summary lines ===
+     75950:Average Error between orignal and fastreg gnss: 207.041193084556
+     62
+     … +65 lines (ctrl+o to expand)
+
+● Complete result — GLIM matches Faster-LIO's accuracy at 2.6× the speed. The
+  pipeline ran clean (exit 0, 356 pole detections written).
+
+  Key numbers from the run (labeled "FastReg" only because that string is
+  hardcoded in the summary printer — the run actually used the GLIM CSV via
+  INCREMENTAL_NAV_CSV):
+  - GLIM pole-corrected median: 10.19 m · odometry-only: 171.06 m
+
+  Let me write up the comparison doc (task 8's deliverable) and then give you
+  the full side-by-side.
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/GLIM_VS_FASTERLIO_
+       COMPARISON.md)
+  ⎿  Wrote 69 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/GLIM_VS_FASTERLIO_COMPARISON.md
+       2 # GLIM vs Faster-LIO — speed & accuracy (2026-09-09)
+       3 **Headline:** GLIM (GPU LiDAR-inertial, on this laptop's RTX 305
+       4 the **~2.6× odometry speedup** we were after **at parity with Fa
+         ster-LIO's
+       5 pole-corrected accuracy**. Same downstream pipeline, same bag, n
+       6 odometry CSV changed.
+       7 
+         0 Ti) Speed (offline, full 541.8 s bag, host i7-12700H + RTX 305
+       9 
+      10 | Backend | Engine | **Real-time factor** | Processing time |
+     … +94 lines (ctrl+o to expand)
+
+● Let me finalize memory with the accuracy result and close out the task.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Done — the full pipeline is built, provisioned, and proven end-to-end. Here's
+  the complete picture.
+
+  GLIM vs Faster-LIO — measured on your data
+
+  Speed (offline, full 541.8 s bag, RTX 3050 Ti):
+
+  ┌──────────────────┬──────────────────┬─────────────────┐
+  │     Backend      │ Real-time factor │ Processing time │
+  ├──────────────────┼──────────────────┼─────────────────┤
+  │ Faster-LIO (CPU) │ ~1.0×            │ ~551 s          │
+  ├──────────────────┼──────────────────┼─────────────────┤
+  │ GLIM (GPU)       │ 2.65×            │ 204.8 s         │
+  └──────────────────┴──────────────────┴─────────────────┘
+
+  Accuracy (pole-corrected, identical pipeline, 0 % GNSS — the hardest case):
+
+  ┌────────────┬───────────────────────┬──────────────────────┐
+  │  Backend   │ Pole-corrected median │ Odometry-only median │
+  ├────────────┼───────────────────────┼──────────────────────┤
+  │ FastReg    │ 8.41 m                │ 207 m                │
+  ├────────────┼───────────────────────┼──────────────────────┤
+  │ Faster-LIO │ 10.11 m               │ 188 m                │
+  ├────────────┼───────────────────────┼──────────────────────┤
+  │ GLIM       │ 10.19 m               │ 171 m                │
+  └────────────┴───────────────────────┴──────────────────────┘
+
+  Bottom line: ~2.6× faster odometry at parity with Faster-LIO's pole-corrected 
+  accuracy (10.19 vs 10.11 m), and slightly better raw odometry (171 vs 188 m) —
+  all on the existing 4 GB laptop GPU, IMU-fused. That's exactly the speed win
+  you asked for, with no accuracy cost. Full write-up in
+  glim_integration/GLIM_VS_FASTERLIO_COMPARISON.md.
+
+  What you now have (reusable)
+
+  glim_integration/ mirrors fasterlio_integration/: PLAN.md, README.md, docker
+  provisioning (setup_nvidia_container_toolkit.sh, pull_glim.sh,
+  run_glim_docker.sh), the pipeline (00_convert_bag →
+  01_extract_and_patch_configs → 02_run_glim → 10_glim_traj_to_csv), and
+  run_all.sh. The two first-run gotchas I hit are fixed in the scripts
+  (auto_quit:=true so it no longer hangs headless; log-based timing so the
+  real-time factor is honest). A clean re-run is now just
+  glim_integration/run_all.sh.
+
+  Two loose ends — want me to do either?
+
+  1. Reclaim disk (recommended): the converted output/ros2_bag/ is 32 GB and
+  your disk is at 97 % (15 GB free). It's only needed to re-run GLIM itself
+  (re-creatable in ~4 min), not for the accuracy sweep. Say the word and I'll
+  delete it.
+  2. Finish the accuracy table: run GLIM through the GNSS-% sweep (10/25/50 %)
+  like the Faster-LIO head-to-head, so you get the full curve rather than just
+  the 0 % point. This reuses the existing GLIM CSV (no GLIM re-run needed) — ~2
+  min each.
+
+  Which would you like — cleanup, the sweep, both, or leave it here?
+
+✻ Brewed for 2m 3s
+
+❯ finish the accuracy table                                                     
+  ⎿  ⧉ Selected 1 lines from glim_integration/GLIM_VS_FASTERLIO_COMPARISON.md in Visual Studio Code
+
+● On it. Let me check how the GNSS-percentage script takes its percentage/seed
+  and outputs, so I invoke the sweep correctly.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      echo "=== env vars in _GNSS_percentage.py ==="; grep -nE
+      "os\.environ|getenv" sno…)
+  ⎿  === env vars in _GNSS_percentage.py ===
+     30:model = load_custom_model(os.environ.get('POLE_MODEL', './model/pol
+     e_best_signal.pt'), confidence_threshold=0.6, backend=os.environ.get('
+     … +33 lines (ctrl+o to expand)
+● The GNSS-% script keys the backend label off the CSV filename ('fasterlio' in 
+  file_path else 'FastReg') — so a GLIM run would be mislabeled "FastReg" and
+  its timing JSON would overwrite your real FastReg results. I need to teach it
+  to recognize glim first (a clean extension of how they already special-case
+  fasterlio). Let me find that line in both scripts.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      echo "=== GNSS% script label line ==="; grep -nE "RT\.odom"
+      snowpole_based_vehicl…)
+  ⎿  === GNSS% script label line ===
+     42:RT.odom = 'Faster-LIO' if 'fasterlio' in file_path.lower() else 'Fa
+     stReg' # (Faster-LIO integration) tag timing metrics with the odometry
+     … +30 lines (ctrl+o to expand)
+
+● Both scripts label the backend off the CSV name. I'll extend that detection to
+  recognize glim (matching how they already special-case fasterlio) so GLIM's
+  timing writes to its own files instead of clobbering your FastReg results.
+
+● Update(Snow-pole-based-vehicle-localization/snowpole_based_vehicle_localizatio
+        n_GNSS_percentage.py)
+  ⎿  File must be read first
+
+● Update(Snow-pole-based-vehicle-localization/snowpole_based_vehicle_localizatio
+        n.py)
+  ⎿  File must be read first
+
+● I need to read the files first. Let me read the relevant lines.
+
+  Read 2 files (ctrl+o to expand)
+
+● Update(Snow-pole-based-vehicle-localization/snowpole_based_vehicle_localizatio
+        n_GNSS_percentage.py)
+  ⎿  Added 1 line, removed 1 line
+      39  import os
+      40  file_path = os.environ.get('INCREMENTAL_NAV_CSV', 'incremental_
+          navigation_results.csv') # load incremental navigation results 
+          CSV file
+      41  print(f'[odometry] LiDAR odometry source CSV: {file_path}') # s
+          elf-report FastReg vs Faster-LIO
+      42 -RT.odom = 'Faster-LIO' if 'fasterlio' in file_path.lower() else
+         - 'FastReg' # (Faster-LIO integration) tag timing metrics with t
+         -he odometry backend                                            
+      42 +RT.odom = 'Faster-LIO' if 'fasterlio' in file_path.lower() else
+         + ('GLIM' if 'glim' in file_path.lower() else 'FastReg') # (Fast
+         +er-LIO/GLIM integration) tag timing metrics with the odometry b
+         +ackend                                                         
+      43  data = pd.read_csv(file_path) # Read the CSV file into a DataFr
+          ame
+      44  
+      45  # Extract the Easting and Northing columns into separate variab
+          les
+
+● Update(Snow-pole-based-vehicle-localization/snowpole_based_vehicle_localizatio
+        n.py)
+  ⎿  Added 1 line, removed 1 line
+      158  # # Enable the following to Plot reference GNSS data on the ma
+           p
+      159  # Set up for dynamic plotting.
+      160  # Label the odometry track by its actual backend (FastReg vs F
+           aster-LIO).
+      161 -ODOM_NAME = 'Faster-LIO' if 'fasterlio' in file_path.lower() e
+          -lse 'FastReg'                                                 
+      161 +ODOM_NAME = 'Faster-LIO' if 'fasterlio' in file_path.lower() e
+          +lse ('GLIM' if 'glim' in file_path.lower() else 'FastReg')    
+      162  RT.odom = ODOM_NAME # (Faster-LIO integration) tag timing metr
+           ics with the odometry backend
+      163  ODOM_LABEL = f'{ODOM_NAME} odometry'
+      164  fig, ax = matplotlib.pyplot.subplots(figsize=(10, 8)) # Create
+            a figure and axis for plotting
+
+● Both scripts now recognize GLIM. Let me add a reusable sweep runner and launch
+  the 0/10/25/50 % sweep (seeded, ~2 min each).
+
+● Write(Snow-pole-based-vehicle-localization/glim_integration/scripts/40_gnss_sw
+       eep.sh)
+  ⎿  Wrote 61 lines to Snow-pole-based-vehicle-localization/glim_integratio
+     n/scripts/40_gnss_sweep.sh
+       2 # --------------------------------------------------------------
+         -------------
+          the same framesor a given odometry CSV, seeded (GNSS_SEED=0) so
+       4 # get GNSS at every level — mirrors the Faster-LIO head-to-head 
+         sweep. Reuses the
+         ted median atometry CSV (no GLIM re-run). Prints the pole-correc
+       6 # each % and a final table parsed from the timing JSONs.
+       8 #   scripts/40_gnss_sweep.sh [csv] [label]
+       9 #     csv   default incremental_navigation_results_glim.csv
+      10 #     label default glim
+     … +68 lines (ctrl+o to expand)
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      chmod +x glim_integration/scripts/40_gnss_sweep.sh…)
+  ⎿  Running in the background (↓ to manage)
+
+● Sweep launched (0/10/25/50 %, seeded). Let me do a quick startup sanity check
+  on the first run — confirm it's processing and now labeled GLIM, not erroring.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      echo "=== tee log (sweep driver) ==="; tail -n 5
+      glim_integration/output/_sweep_g…)
+  ⎿  === tee log (sweep driver) ===
+     ==================== GNSS 0% (seed 0) ====================
+     === 0% run: backend label + progress ===
+     === backend label check (should say GLIM in timing) ===
+
+● The sweep is running — the first run (0 %) is in its model/bag-load phase now,
+  no errors. It'll work through 0/10/25/50 % sequentially (~2 min each, ~8 min
+  total), then print a parsed summary table.
+
+  While it runs, note I also fixed a real bug in your pipeline scripts: both
+  keyed the backend label purely off 'fasterlio' in filename, so every GLIM run 
+  was being recorded as "FastReg" — which had silently overwritten
+  timing_FastReg_pipeline_gnss0.json with GLIM data during my earlier 0 % run.
+  They now recognize glim → GLIM's timing writes to timing_GLIM_* files and its
+  own row in timing_comparison.csv, leaving your FastReg/Faster-LIO records
+  intact. (Your real FastReg pipeline_gnss0 timing can be regenerated by
+  re-running the pipeline with the FastReg CSV if you want it back.)
+
+  I'll report the completed accuracy table — GLIM vs Faster-LIO vs FastReg
+  across all four GNSS levels — and fold it into GLIM_VS_FASTERLIO_COMPARISON.md
+  as soon as the sweep finishes.
+
+✻ Worked for 2m 53s
+
+● Background command "Launch GLIM GNSS-% sweep (background)" completed (exit
+code 0)
+
+● Sweep finished (exit 0). Let me pull the results.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      echo "=== sweep driver summary ==="; sed -n '/SWEEP SUMMARY/,$p'
+      glim_integration…)
+  ⎿  === sweep driver summary ===
+     ==================== SWEEP SUMMARY (glim) ====================
+      GNSS % | pole-corr median |    mean |     max | gnss_used
+     … +18 lines (ctrl+o to expand)
+
+● The sweep is clean and the timing is now correctly labeled GLIM. The result is
+  decisive:
+
+  GLIM pole-corrected median error tracks Faster-LIO essentially 1:1 at every 
+  GNSS level — while running 2.6× faster.
+
+  ┌───────────┬─────────┬────────────┬─────────┐
+  │ GNSS used │ FastReg │ Faster-LIO │  GLIM   │
+  ├───────────┼─────────┼────────────┼─────────┤
+  │ 0 %       │ 8.41 m  │ 10.11 m    │ 10.19 m │
+  ├───────────┼─────────┼────────────┼─────────┤
+  │ 10 %      │ 2.13 m  │ 1.05 m     │ 1.13 m  │
+  ├───────────┼─────────┼────────────┼─────────┤
+  │ 25 %      │ 1.29 m  │ 0.61 m     │ 0.64 m  │
+  ├───────────┼─────────┼────────────┼─────────┤
+  │ 50 %      │ 0.53 m  │ 0.25 m     │ 0.26 m  │
+  └───────────┴─────────┴────────────┴─────────┘
+
+  Let me fold this into the comparison doc and memory.
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/GLIM_VS_FASTERLIO
+        _COMPARISON.md)  ⎿  Added 19 lines, removed 14 lines
+      19    pose-graph global mapping (VRAM-safe on 4 GB). All async CPU 
+          stages run behind
+      20    the odometry and don't gate the real-time factor.
+      21  
+      22 -## 2. Accuracy (pole-corrected, via the identical snow-pole pip
+         -eline, 0 % GNSS)                                               
+      22 +## 2. Accuracy — pole-corrected median error vs GNSS availabili
+         +ty                                                             
+      23  
+      24 -| Backend | **Pole-corrected median** | Odometry-only median | 
+      25 -|---|---|---|                                                  
+      26 -| FastReg | 8.41 m | 207 m |                                   
+      27 -| Faster-LIO | 10.11 m | 188 m |                               
+      28 -| **GLIM** | **10.19 m** | **171 m** |                         
+      24 +Identical pipeline for all three backends; GNSS frames seeded (
+         +`GNSS_SEED=0`) so                                              
+      25 +the same frames get GNSS at each level.                        
+      26  
+      30 -- **GLIM ties Faster-LIO** on the metric that matters (pole-cor
+         -rected median:                                                 
+      31 -  10.19 vs 10.11 m at 0 % GNSS) and is **slightly better on raw
+         - odometry**                                                    
+      32 -  (171 vs 188 m), i.e. GLIM's local trajectory is marginally ti
+         -ghter.                                                         
+      33 -- Pipeline wall-clock (odometry-agnostic): 126 s, 67 fps, YOLO 
+         -~20 ms/frame —                                                 
+      34 -  unchanged, as expected.                                      
+      35 -- Per the Faster-LIO study, 0 % GNSS is the *hardest* case for 
+         -a LIO backend;                                                 
+      36 -  with any GNSS the pole-correction collapses error 4–10×. A GL
+         -IM GNSS-% sweep                                                
+      37 -  (10/25/50 %) is the natural follow-up to complete the table. 
+      27 +| GNSS used | FastReg | Faster-LIO | **GLIM** |                
+      28 +|---|---|---|---|                                              
+      29 +| 0 %  | 8.41 m | 10.11 m | **10.19 m** |                      
+      30 +| 10 % | 2.13 m | 1.05 m | **1.13 m** |                        
+      31 +| 25 % | 1.29 m | 0.61 m | **0.64 m** |                        
+      32 +| 50 % | 0.53 m | 0.25 m | **0.26 m** |                        
+      33  
+      34 +(Pole-corrected median, metres. GLIM odometry-only median at 0 
+         +% = 171 m vs                                                   
+      35 +Faster-LIO 188 m — GLIM's raw trajectory is marginally tighter.
+         +)                                                              
+      36 +                                                               
+      37 +- **GLIM tracks Faster-LIO 1:1 across the whole sweep** (within
+         + 0.01–0.08 m at                                                
+      38 +  every level) while running 2.6× faster — i.e. the speedup cos
+         +ts no accuracy.                                                
+      39 +- 0 % GNSS is the hardest case for any LIO backend; once ≥10 % 
+         +GNSS is available                                              
+      40 +  the pole-correction collapses error ~5–10× and both GLIM and 
+         +Faster-LIO beat                                                
+      41 +  FastReg. This reproduces the Faster-LIO study's finding, now 
+         +for GLIM.                                                      
+      42 +- Pipeline wall-clock is odometry-agnostic (~126 s, 67 fps, YOL
+         +O ~20 ms/frame).                                               
+      43 +                                                               
+      44  ## 3. Caveats / notes
+      45  
+      46  - **Global drift**: GLIM raw odometry-vs-GNSS start-anchored dr
+          ift is median
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/GLIM_VS_FASTERLIO
+        _COMPARISON.md)
+  ⎿  Added 3 lines, removed 1 line
+      69  
+      70  ## 5. Follow-ups
+      71  
+      72 -- [ ] GLIM GNSS-% sweep (10/25/50 %, `GNSS_SEED=0`) to fill the
+         - accuracy table.                                               
+      72 +- [x] GLIM GNSS-% sweep (0/10/25/50 %, `GNSS_SEED=0`) — done, t
+         +able above                                                     
+      73 +      (`scripts/40_gnss_sweep.sh`; per-level logs `output/sweep
+         +_glim_gnss*.log`,                                              
+      74 +      metrics `fasterlio_integration/output/timing_GLIM_gnss_pe
+         +rcentage_gnss*.json`).                                         
+      75  - [ ] Reclaim disk: delete `output/ros2_bag/` (~32 GB) — no lon
+          ger needed.
+      76  - [ ] Optional: tune GLIM voxel/preprocess resolution for even 
+          higher FPS.
+
+● Now let me update memory with the full sweep and the label-detection fix.
+
+  Wrote 2 memories (ctrl+o to expand)
+
+● The accuracy table is complete and written into
+  GLIM_VS_FASTERLIO_COMPARISON.md. Here's the finished comparison.
+
+  GLIM vs Faster-LIO vs FastReg — pole-corrected median error (seeded, same 
+  pipeline)
+
+  ┌───────────┬─────────┬────────────┬─────────┐
+  │ GNSS used │ FastReg │ Faster-LIO │  GLIM   │
+  ├───────────┼─────────┼────────────┼─────────┤
+  │ 0 %       │ 8.41 m  │ 10.11 m    │ 10.19 m │
+  ├───────────┼─────────┼────────────┼─────────┤
+  │ 10 %      │ 2.13 m  │ 1.05 m     │ 1.13 m  │
+  ├───────────┼─────────┼────────────┼─────────┤
+  │ 25 %      │ 1.29 m  │ 0.61 m     │ 0.64 m  │
+  ├───────────┼─────────┼────────────┼─────────┤
+  │ 50 %      │ 0.53 m  │ 0.25 m     │ 0.26 m  │
+  └───────────┴─────────┴────────────┴─────────┘
+
+  (GLIM odometry-only at 0 % = 171 m vs Faster-LIO 188 m — raw trajectory 
+  marginally tighter.)
+
+  Verdict
+
+  GLIM tracks Faster-LIO to within 0.01–0.08 m at every GNSS level — 
+  statistically identical accuracy — while running 2.6× faster (2.65× vs ~1.0×
+  real-time). Both beat FastReg the moment any GNSS is available; the only spot
+  GLIM/Faster-LIO trail FastReg is the pure-dead-reckoning 0 % case, exactly as
+  the original Faster-LIO study found. So the speedup is free: no accuracy cost.
+
+  This directly answers your original ask — a faster, IMU-fused, trustworthy
+  odometry to replace Faster-LIO/FastReg. On your hardware, GLIM is it.
+
+  Status
+
+  - ✅ Complete glim_integration/ pipeline (plan, env, scripts, run_all.sh,
+  sweep) — reproducible.
+  - ✅ Provisioned, run end-to-end on GPU, both speed and full-sweep accuracy
+  measured.
+  - ✅ Results in GLIM_VS_FASTERLIO_COMPARISON.md; timing correctly labeled
+  timing_GLIM_* (fixed the label bug so your FastReg/Faster-LIO records stay
+  clean).
+  - ✅ Memory updated.
+
+  One housekeeping item left
+
+  Disk is at 97 % (~15 GB free) because of the 32 GB output/ros2_bag/ (the
+  converted ROS2 bag). It's only needed to re-run GLIM itself — not for anything
+  we've measured — and re-creates in ~4 min via 00_convert_bag.sh. Want me to
+  delete it to reclaim the 32 GB? (I made it, so it's safe for me to remove —
+  just confirm.)
+
+✻ Churned for 1m 52s
+
+❯ also include the comparision with total time taken,                           
+  ⎿  ⧉ Selected 1 lines from glim_integration/GLIM_VS_FASTERLIO_COMPARISON.md in Visual Studio Code
+
+● Good addition — "real-time factor" alone hides the wall-clock. Let me pull the
+  actual measured times for each stage (Faster-LIO's offline odometry time, the
+  pipeline wall-clock per backend, and GLIM's conversion overhead) so the
+  total-time comparison is honest.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation
+      FO=fasterlio_integration/output…)
+  ⎿  === Faster-LIO OFFLINE odometry wall-clock (max-speed, fair vs GLIM's
+     204.8s) ===
+     [bench] WALLCLOCK_SECONDS=111
+     … +18 lines (ctrl+o to expand)
+
+● This is important — and it corrects something. Let me verify exactly which
+  Faster-LIO offline config produced which time, because it changes the
+  conclusion.
+
+● Bash(cd /home/gsm/Documents/Projects/Fasterlio/Snow-pole-based-vehicle-localiz
+      ation/fasterlio_integration/output
+      for lbl in base ds; do…)
+  ⎿  === Faster-LIO offline [base] (offline_bench_base.log) ===
+     [bench] label=base config=ouster_os2_128_offline_base.yaml
+     I0908 16:37:12.783452     1 run_mapping_offline.cc:89] Faster LIO aver
+     … +26 lines (ctrl+o to expand)
+
+● This is a genuinely important correction, and I need to be upfront: my earlier
+  "2.6× faster" claim was wrong. Pulling the total times exposed it.
+
+  The ~551 s I used for Faster-LIO was its real-time playback run (capped by the
+  rosbag play rate) — not a compute measurement. Faster-LIO's actual offline
+  throughput (reading the bag at max speed, which you already benchmarked) is
+  far higher:
+
+  ┌────────────────────────────────┬────────────┬───────────────────────────┐
+  │  Odometry (offline, 541.8 s    │ Wall-clock │        Throughput         │
+  │              bag)              │            │                           │
+  ├────────────────────────────────┼────────────┼───────────────────────────┤
+  │ Faster-LIO ds (pt_filter 4)    │ 111 s      │ 79.1 FPS (7.9× real-time) │
+  ├────────────────────────────────┼────────────┼───────────────────────────┤
+  │ Faster-LIO base (pt_filter 2)  │ 159 s      │ 46.8 FPS (4.7× real-time) │
+  ├────────────────────────────────┼────────────┼───────────────────────────┤
+  │ GLIM (GPU)                     │ ~205 s     │ 26.5 FPS (2.65×           │
+  │                                │            │ real-time)                │
+  └────────────────────────────────┴────────────┴───────────────────────────┘
+
+  On this laptop, Faster-LIO offline is faster than GLIM — even though GLIM
+  downsamples harder (~10k pts/scan) and uses the GPU. The 4 GB entry GPU +
+  GLIM's heavier factor-graph/mapping work simply doesn't out-run the 20-thread
+  i7 on optimized iVox+ESIKF. Let me fix the doc so it doesn't carry the wrong
+  claim.
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/GLIM_VS_FASTERLIO
+        _COMPARISON.md)
+  ⎿  Added 6 lines, removed 4 lines
+       1  # GLIM vs Faster-LIO — speed & accuracy (2026-09-09)
+       2  
+       3 -**Headline:** GLIM (GPU LiDAR-inertial, on this laptop's RTX 30
+         -50 Ti / 4 GB) delivers                                         
+       4 -the **~2.6× odometry speedup** we were after **at parity with F
+         -aster-LIO's                                                    
+       5 -pole-corrected accuracy**. Same downstream pipeline, same bag, 
+         -nothing after the                                              
+       6 -odometry CSV changed.                                          
+       3 +**Headline:** GLIM (GPU LiDAR-inertial, RTX 3050 Ti / 4 GB) **m
+         +atches Faster-LIO's                                            
+       4 +pole-corrected accuracy** (§2) but **does NOT beat it on speed 
+         +on this hardware**                                             
+       5 +(§1): run like-for-like (both offline / max-speed), Faster-LIO 
+         +processes the bag in                                           
+       6 +111–159 s vs GLIM's ~205 s. GLIM's "2.65× real-time" only looke
+         +d like a win against                                           
+       7 +Faster-LIO's *playback-capped* run (~551 s), which is an artifa
+         +ct of `rosbag play`                                            
+       8 +rate, not a compute measurement. Same downstream pipeline, same
+         + bag.                                                          
+       9  
+      10  ## 1. Speed (offline, full 541.8 s bag, host i7-12700H + RTX 30
+          50 Ti)
+      11  
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/GLIM_VS_FASTERLIO
+        _COMPARISON.md)
+  ⎿  Added 24 lines, removed 11 lines
+       7  Faster-LIO's *playback-capped* run (~551 s), which is an artifa
+          ct of `rosbag play`
+       8  rate, not a compute measurement. Same downstream pipeline, same
+           bag.
+       9  
+      10 -## 1. Speed (offline, full 541.8 s bag, host i7-12700H + RTX 30
+         -50 Ti)                                                         
+      10 +## 1. Speed — odometry throughput (offline / max-speed, 541.8 s
+         + bag, i7-12700H + RTX 3050 Ti)                                 
+      11  
+      12 -| Backend | Engine | **Real-time factor** | Processing time |  
+      13 -|---|---|---|---|                                              
+      14 -| Faster-LIO | CPU iVox + ESIKF | ~1.0× | ~551 s |             
+      15 -| **GLIM** | **GPU VGICP + factor graph** | **2.65×** | **204.8
+         - s** |                                                         
+      12 +Like-for-like: all read the bag at max speed (Faster-LIO via `r
+         +un_mapping_offline`,                                           
+      13 +GLIM via `glim_rosbag`). GLIM = GPU odometry + CPU sub/global m
+         +apping (4 GB-safe),                                            
+      14 +downsampling ~10k pts/scan; measured from GLIM's own per-scan p
+         +rocessing timestamps.                                          
+      15  
+      17 -- ~**2.6× faster** odometry on the dense OS-2-128 cloud, no 4 G
+         -B VRAM OOM.                                                    
+      18 -- Measured from GLIM's own per-scan processing timestamps (log-
+         -based). GLIM's                                                 
+      19 -  internal playback-speed samples averaged ~2.6×, consistent.  
+      20 -- Config: **GPU odometry** (`config_odometry_gpu.json`) + **CPU
+         -** sub-mapping &                                               
+      21 -  pose-graph global mapping (VRAM-safe on 4 GB). All async CPU 
+         -stages run behind                                              
+      22 -  the odometry and don't gate the real-time factor.            
+      16 +| Backend | Engine | Downsampling | Wall-clock | Throughput |  
+      17 +|---|---|---|---|---|                                          
+      18 +| Faster-LIO (ds) | CPU iVox+ESIKF | pt_filter 4 / surf 1.0 | *
+         +*111 s** | **79.1 FPS (7.9×)** |                               
+      19 +| Faster-LIO (base) | CPU iVox+ESIKF | pt_filter 2 / surf 0.5 |
+         + **159 s** | **46.8 FPS (4.7×)** |                             
+      20 +| **GLIM** | GPU VGICP + factor graph | ~10k pts/scan | **~205 
+         +s** | **26.5 FPS (2.65×)** |                                   
+      21  
+      22 +- **On this hardware Faster-LIO offline is faster than GLIM** (
+         +111–159 s vs ~205 s),                                          
+      23 +  despite GLIM downsampling harder and using the GPU. No 4 GB V
+         +RAM OOM.                                                       
+      24 +- "2.65×" is 2.65× **real-time**, not vs Faster-LIO — Faster-LI
+         +O offline is 4.7–7.9×.                                         
+      25 +- ⚠️ The earlier ~551 s figure for Faster-LIO was its `rosbag p
+         +lay` run, capped at                                            
+      26 +  ~1.0× by the playback rate — an artifact of how it's driven, 
+         +not its compute limit.                                         
+      27 +                                                               
+      28 +### Total time, raw bag → localization result (repeat run; traj
+         +→CSV bridge ≈ equal, omitted)                                  
+      29 +                                                               
+      30 +| Stage | Faster-LIO (ds) | Faster-LIO (base) | GLIM |         
+      31 +|---|---|---|---|                                              
+      32 +| one-time bag convert (ROS1→ROS2) | — | — | 240 s |           
+      33 +| odometry | 111 s | 159 s | ~205 s |                          
+      34 +| pipeline / localization (odometry-agnostic) | ~127 s | ~127 s
+         + | ~118 s |                                                    
+      35 +| **repeat-run total** | **~238 s** | **~286 s** | **~323 s** (
+         ++240 s first run) |                                            
+      36 +                                                               
+      37  ## 2. Accuracy — pole-corrected median error vs GNSS availabili
+          ty
+      38  
+      39  Identical pipeline for all three backends; GNSS frames seeded (
+          `GNSS_SEED=0`) so
+
+● Now the verdict section and memory.
+
+● Update(Snow-pole-based-vehicle-localization/glim_integration/GLIM_VS_FASTERLIO
+        _COMPARISON.md)
+  ⎿  Added 17 lines, removed 5 lines
+      72  - **glim_rosbag headless**: must pass `-p auto_quit:=true` (bak
+          ed into
+      73    `02_run_glim.sh`) or it blocks on a keypress after playback.
+      74  
+      75 -## 4. Verdict                                                  
+      75 +## 4. Verdict (corrected)                                      
+      76  
+      77 -For this project's stated goal — **faster odometry that still f
+         -uses IMU and is                                                
+      78 -trustworthy** — GLIM is a clear win: **2.6× the throughput of F
+         -aster-LIO with                                                 
+      79 -equal pole-corrected accuracy**, on the existing laptop GPU. Fa
+         -ster-LIO remains a                                             
+      80 -fine CPU fallback; GLIM is the one to use when the GPU is avail
+         -able.                                                          
+      77 +GLIM **matches Faster-LIO's pole-corrected accuracy** (§2) but,
+         + **on this laptop,                                             
+      78 +does NOT beat it on speed**: Faster-LIO run offline is 111–159 
+         +s vs GLIM's ~205 s                                             
+      79 +(+240 s one-time conversion). The 4 GB laptop GPU can't out-run
+         + the 20-thread CPU                                             
+      80 +for this workload, and GLIM does more work (factor graph + sub/
+         +global mapping).                                               
+      81  
+      82 +Practical takeaways:                                           
+      83 +- **Fastest option on this hardware = Faster-LIO in OFFLINE mod
+         +e**                                                            
+      84 +  (`fasterlio_integration/scripts/run_offline_bench.sh`), 111–1
+         +59 s. If the current                                           
+      85 +  pain is Faster-LIO taking ~551 s, that's the real-time *playb
+         +ack* path                                                      
+      86 +  (`00_run_fasterlio.sh` / `rosbag play`) — switching to offlin
+         +e largely removes the                                          
+      87 +  speed problem with **no new dependency**. This is the highest
+         +-value quick win.                                              
+      88 +- **GLIM earns its place** only for its global optimization / l
+         +oop-closure and                                                
+      89 +  factor-graph consistency (not exercised on this one-way drive
+         +), or on a stronger                                            
+      90 +  desktop GPU where GPU VGICP would pull ahead of the CPU.     
+      91 +- Gap-closing GLIM tuning to try: disable sub/global mapping (p
+         +ure odometry),                                                 
+      92 +  coarser preprocess downsampling — but unlikely to beat Faster
+         +-LIO ds's 79 FPS here.                                         
+      93 +                                                               
+      94  Artifacts: `output/glim_traj_gpu.txt`, `../incremental_navigati
+          on_results_glim.csv`,
+      95  `../snowpole_results_glim.csv`, `output/live_map_glim.png`, `ou
+          tput/pipeline_glim.log`.
+      96  
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Done — the doc and memory now carry the corrected, total-time comparison.
+  Here's the honest bottom line.
+
+  Total time taken — raw bag → localization result (measured, offline)
+
+  ┌────────────────────────┬──────────────┬───────────────┬────────────────┐
+  │         Stage          │ Faster-LIO   │  Faster-LIO   │   GLIM (GPU)   │
+  │                        │     (ds)     │    (base)     │                │
+  ├────────────────────────┼──────────────┼───────────────┼────────────────┤
+  │ one-time bag convert   │ —            │ —             │ 240 s          │
+  │ (ROS1→ROS2)            │              │               │                │
+  ├────────────────────────┼──────────────┼───────────────┼────────────────┤
+  │ odometry               │ 111 s (79    │ 159 s (47     │ ~205 s (26     │
+  │                        │ FPS)         │ FPS)          │ FPS)           │
+  ├────────────────────────┼──────────────┼───────────────┼────────────────┤
+  │ pipeline /             │ ~127 s       │ ~127 s        │ ~118 s         │
+  │ localization*          │              │               │                │
+  ├────────────────────────┼──────────────┼───────────────┼────────────────┤
+  │ repeat-run total       │ ~238 s       │ ~286 s        │ ~323 s (+240 s │
+  │                        │              │               │  first run)    │
+  └────────────────────────┴──────────────┴───────────────┴────────────────┘
+
+  *odometry-agnostic (same for all); traj→CSV bridge ≈ equal, omitted.
+
+  What this changes
+
+  - GLIM does not speed up your odometry on this laptop. Faster-LIO run offline
+  (111–159 s) beats GLIM (~205 s), even though GLIM downsamples harder and uses
+  the GPU. The RTX 3050 Ti (4 GB) plus GLIM's heavier factor-graph + mapping
+  just can't out-run optimized iVox+ESIKF on your 20-thread i7.
+  - My earlier "2.6× faster" was comparing against the wrong baseline —
+  Faster-LIO's rosbag play run (~551 s) is rate-capped, not a compute
+  measurement. I've corrected the headline, speed table, and verdict in
+  GLIM_VS_FASTERLIO_COMPARISON.md.
+  - What does hold: GLIM matches Faster-LIO's accuracy across the whole GNSS
+  sweep (10.19/1.13/0.64/0.26 m).
+
+  The actually-useful takeaway for your original goal
+
+  If your pain is "odometry takes too long" and you've been seeing ~551 s,
+  that's the playback path (00_run_fasterlio.sh → rosbag play). Switch to the
+  offline path you already have —
+  fasterlio_integration/scripts/run_offline_bench.sh — and it drops to 111–159 s
+  with no new dependency. That's the real quick win, and it's bigger than
+  anything GLIM gives here.
+
+  GLIM is still worth keeping for its global optimization / loop-closure (not
+  exercised on this one-way drive) or if you move to a desktop GPU — but as a
+  pure speed play on this hardware, it's not the answer. I'd recommend the
+  offline-Faster-LIO route for speed.
+
+  Want me to (a) benchmark GLIM with sub/global mapping disabled + coarser
+  downsampling to see how close it can get, or (b) leave GLIM as the
+  accuracy-parity/loop-closure option and call the offline-Faster-LIO switch
+  your speed fix? (Plus the still-pending 32 GB ros2_bag cleanup.)
+
+✻ Brewed for 4m 48s

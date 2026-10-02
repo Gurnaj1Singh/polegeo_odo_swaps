@@ -1,0 +1,20 @@
+<launch>
+  <!-- Faster-LIO mapping for the Ouster OS-2-128 snow-pole dataset.
+       Drop this into faster-lio/launch/ (config path is passed explicitly below). -->
+
+  <arg name="rviz" default="true"/>
+  <arg name="config_file" default="$(find faster_lio)/config/ouster_os2_128.yaml"/>
+
+  <rosparam command="load" file="$(arg config_file)"/>
+
+  <!-- Faster-LIO uses one param outside the yaml for map publish throttling -->
+  <param name="feature_extract_enable" type="bool" value="false"/>
+  <param name="runtime_pos_log_enable" type="bool" value="true"/>
+
+  <node pkg="faster_lio" type="run_mapping_online" name="laserMapping" output="screen"/>
+
+  <group if="$(arg rviz)">
+    <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" output="log"
+          args="-d $(find faster_lio)/rviz_cfg/loam_livox.rviz"/>
+  </group>
+</launch>

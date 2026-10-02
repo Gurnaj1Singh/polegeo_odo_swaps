@@ -1,0 +1,103 @@
+# ============================================================================
+# Combined-repo .gitignore  (repo root = Fasterlio/)
+#
+# Push SOURCE only (~29 MB). Everything excluded here is either the downloaded
+# dataset (~47 GB, see README), a build artifact, a virtualenv, or a regenerable
+# pipeline output — none of it belongs in git.
+# To archive a specific small artifact anyway:  git add -f <path>
+# ============================================================================
+
+# ---- Dataset (download from Kaggle before running — see README) ------------
+Snow-pole-based-vehicle-localization/snow_pole_geo_localization_data/
+
+# ---- Large binary recordings / point clouds (anywhere in the tree) ---------
+*.bag
+*.bag.active
+*.db3
+*.db3-wal
+*.db3-shm
+*.mcap
+*.pcd
+*.ply
+
+# ---- Regenerable pipeline outputs ------------------------------------------
+# (scripts recreate these dirs with `mkdir -p`, so losing them is harmless)
+Snow-pole-based-vehicle-localization/*/output/
+output/
+
+# ---- Generated per-backend result CSVs (the pipeline regenerates these) ----
+# The ORIGINAL FastReg CSV `incremental_navigation_results.csv` and the
+# ground-truth pole CSV are kept (inputs/references, not generated).
+Snow-pole-based-vehicle-localization/incremental_navigation_results_fasterlio.csv
+Snow-pole-based-vehicle-localization/incremental_navigation_results_glim.csv
+Snow-pole-based-vehicle-localization/incremental_navigation_results_superlio.csv
+Snow-pole-based-vehicle-localization/snowpole_results_*.csv
+**/timing_comparison.csv
+**/run_metrics.csv
+
+# ---- Super-LIO build artifacts (ROS 2 colcon) ------------------------------
+Super-LIO/build/
+Super-LIO/install/
+Super-LIO/log/
+Super-LIO/devel/
+
+# ---- fastreg build artifacts -----------------------------------------------
+fastreg/build/
+fastreg/dist/
+fastreg/*.egg-info/
+
+# ---- Logs / videos ---------------------------------------------------------
+*.log
+*.mp4
+*.gif
+*.avi
+*.mkv
+
+# ---- Compiled / native build output ----------------------------------------
+*.so
+*.o
+*.a
+
+# ---- Python caches & build -------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Virtual environments --------------------------------------------------
+.baginspect_venv/
+.venv/
+venv/
+env/
+*venv*/
+
+# ---- Editor / OS / agent-local --------------------------------------------
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Secrets ---------------------------------------------------------------
+.env
+.env.*
+*.key
+*.pem
+kaggle.json
+
+# ============================================================================
+# KEPT on purpose: all *.py *.sh *.yaml *.yml *.md *.json(configs) *.pdf,
+#   Super-LIO/src + docs, fastreg source, model/pole_best_signal.pt,
+#   Trip068.json, Groundtruth_pole_location_*.csv,
+#   incremental_navigation_results.csv (original FastReg), environment.yml.
+# ============================================================================

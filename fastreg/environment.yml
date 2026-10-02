@@ -1,0 +1,21 @@
+name: fastreg
+channels:
+  - pytorch
+  - open3d-admin
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7.9
+  - pytorch==1.7.1
+  - cudatoolkit=11.0
+  - open3d=0.13.0
+  - h5py
+  - tqdm
+  - matplotlib
+  - pip
+  - pip:
+        - torch_sparse @ https://data.pyg.org/whl/torch-1.7.0%2Bcu110/torch_sparse-0.6.8-cp37-cp37m-linux_x86_64.whl
+        - torch_cluster @ https://data.pyg.org/whl/torch-1.7.0%2Bcu110/torch_cluster-1.5.9-cp37-cp37m-linux_x86_64.whl
+        - torch_scatter @ https://data.pyg.org/whl/torch-1.7.0%2Bcu110/torch_scatter-2.0.5-cp37-cp37m-linux_x86_64.whl
+        - torch_geometric===1.7.2
+        - tensorboard

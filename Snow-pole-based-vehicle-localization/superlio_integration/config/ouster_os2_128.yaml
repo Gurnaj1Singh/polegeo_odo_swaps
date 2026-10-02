@@ -1,0 +1,69 @@
+# =====================================================================================
+# Super-LIO config for the Ouster OS-2-128 snow-pole dataset (ROS2 branch schema).
+# Based on Super-LIO's NTU.yaml (the Ouster template: lidar_type 7).
+#
+# Primary / "downsampled" operating point: filter_rate 4 mirrors Faster-LIO's
+# downsampled point_filter_num=4 so the odometry-speed A/B is apples-to-apples
+# (target to beat: Faster-LIO ds 12.65 ms/scan = 79 FPS; GLIM 26.5 FPS).
+#
+# Run:  ros2 run super_lio super_lio_node --ros-args --params-file <this file>
+# =====================================================================================
+/**:
+  ros__parameters:
+    lio.map.save_map: false
+    lio.map.if_filter: false
+    lio.map.save_map_dir: "map"
+    lio.map.map_name: "map.pcd"
+    lio.map.ds_size: 0.5
+    lio.map.save_interval: 500
+
+    # --- topics (match the dataset / recorded ROS2 bag) ---
+    lio.ros.lidar_topic: "/ouster/points"
+    lio.ros.imu_topic: "/ouster/imu"
+
+    # --- sensor ---
+    lio.sensor.lidar_type: 7          # 7 = Ouster (ds.h OUSTER; reads ouster_ros::Point, pt.t ns)
+    lio.sensor.blind: 2.0             # matches Faster-LIO blind 2.0 m
+    lio.sensor.maxrange: 150.0        # matches Faster-LIO det_range 150 m
+    lio.sensor.filter_rate: 4         # keep every 4th point (= Faster-LIO ds point_filter_num=4)
+    lio.sensor.enable_downsample: true
+    lio.sensor.voxel_fliter_size: 0.5
+    lio.sensor.gravity_norm: 9.819    # Nordic test site (Hemnekjolen, Norway)
+    lio.sensor.imu_type: 0            # accel consumed raw as m/s^2 (Ouster built-in IMU)
+    lio.sensor.imu_na: 0.1            # = Faster-LIO acc_cov
+    lio.sensor.imu_ng: 0.1            # = Faster-LIO gyr_cov
+    lio.sensor.imu_nba: 0.0001        # = Faster-LIO b_acc_cov
+    lio.sensor.imu_nbg: 0.0001        # = Faster-LIO b_gyr_cov
+
+    # --- extrinsic: LiDAR in IMU frame = [tx,ty,tz, R row-major(9)] ---
+    # Trip068.json: R = I, t = (-0.006253, 0.011775, -0.007645) m
+    lio.extrinsic.lidar_imu: [-0.006253, 0.011775, -0.007645,
+                              1.0, 0.0, 0.0,
+                              0.0, 1.0, 0.0,
+                              0.0, 0.0, 1.0]
+    lio.extrinsic.odom_robo: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    # --- OctVox / hash map ---
+    lio.hash_map.hash_capacity: 2000000
+    lio.hash_map.vox_resolution: 0.5
+
+    # --- IESKF ---
+    lio.kf.kf_type: 0
+    lio.kf.kf_max_iterations: 4       # matches Faster-LIO max_iteration 4
+    lio.kf.kf_align_gravity: true
+    lio.kf.kf_quit_eps: 0.001
+
+    # --- output (headless: don't publish world/dense clouds -> saves CPU;
+    #     /lio/odom is always published regardless) ---
+    lio.output.robot: false
+    lio.output.plan_env_world: false
+    lio.output.plan_env_body: false
+    lio.output.ml_map: false
+    lio.output.planner: false
+    lio.output.map: false
+    lio.output.dense: false
+    lio.output.pub_step: 1
+
+    # --- evaluation: per-stage compute timing (Undistort/DownSample/Observe/UpdateMap),
+    #     flushed by printTimeRecord() on Ctrl-C -> rate-independent FPS benchmark ---
+    lio.eva.timer: true

@@ -1,0 +1,123 @@
+SYSTEM CONFIGURATION
+
+All experiments in this repository were conducted on the following system configuration.
+
+
+OPERATING SYSTEM
+----------------
+Distribution: Ubuntu
+Version: Ubuntu 22.04.5 LTS (Jammy Jellyfish)
+OS Family: Debian-based
+
+Command used:
+cat /etc/os-release
+
+
+KERNEL
+------
+Kernel Version: Linux 5.15.0-164-generic
+Build Information: #174-Ubuntu SMP Fri Nov 14 20:25:16 UTC 2025
+
+Command used:
+uname -a
+
+
+ARCHITECTURE
+------------
+System Architecture: x86_64
+CPU Operation Modes: 32-bit, 64-bit
+Byte Order: Little Endian
+
+Command used:
+lscpu
+
+
+PROCESSOR (CPU)
+---------------
+CPU Vendor: Intel
+CPU Model: Intel(R) Xeon(R) Platinum 8358 @ 2.60 GHz
+Logical CPUs: 8
+Sockets: 8
+Cores per Socket: 1
+Threads per Core: 1
+
+
+
+Command used:
+lscpu
+
+
+MEMORY
+------
+Total RAM: 39 GiB
+Available RAM during experiments: ~24 GiB
+Swap: 1.8 GiB
+
+Command used:
+free -h
+
+
+GPU
+---
+GPU Model: NVIDIA L40-16Q
+GPU Memory: 16 GB
+Driver Version: 550.54.15
+CUDA Runtime Version (Driver): 12.4
+Compute Mode: Default
+
+Command used:
+nvidia-smi
+
+
+CUDA TOOLKIT
+------------
+CUDA Compiler (nvcc) Version: 12.6
+CUDA Compilation Tools: Release 12.6, V12.6.20
+Build Date: Fri Jun 14, 2024
+
+Note:
+The CUDA toolkit version (12.6) is newer than the CUDA runtime version
+reported by the driver (12.4). This configuration is valid due to NVIDIA
+driver backward compatibility.
+
+Command used:
+nvcc --version
+
+
+PYTHON & ENVIRONMENT
+-------------------
+Python Version: 3.9.18
+Environment Manager: Conda
+Conda Version: 4.13.0
+Active Conda Environment: polegeo
+
+Commands used:
+python --version
+conda --version
+conda info --envs
+conda activate polegeo
+
+
+COMPILER & BUILD TOOLS
+---------------------
+C/C++ Compiler: GCC
+GCC Version: 11.4.0
+Build System: CMake
+CMake Version: 3.26.1
+
+Commands used:
+gcc --version
+cmake --version
+
+
+VIRTUALIZATION
+--------------
+Execution Platform: Virtual Machine
+Hypervisor Vendor: VMware
+Virtualization Type: Full virtualization
+
+Command used:
+lscpu | grep Hypervisor
+
+
+
