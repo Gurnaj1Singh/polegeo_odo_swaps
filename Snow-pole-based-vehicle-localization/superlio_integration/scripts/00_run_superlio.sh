@@ -33,6 +33,13 @@ LABEL="$(basename "$CFG" .yaml)"
 ODOM_BAG="$OUT/superlio_odom"
 LOG="$OUT/superlio_run_${LABEL}.log"
 
+# Portable path: run Super-LIO inside Docker (no host ROS 2 Jazzy / colcon build).
+# Opt in with SUPERLIO_DOCKER=1; everything downstream (the recorded odom bag, the
+# bridge, the pipeline) is identical to the native path.
+if [ "${SUPERLIO_DOCKER:-0}" = "1" ]; then
+  exec "$INTEG/docker/run_superlio_docker.sh" "$BAG" "$RATE" "$CFG"
+fi
+
 [ -d "$BAG" ] || { echo "ROS2 bag dir not found: $BAG" >&2; exit 1; }
 [ -f "$WS/install/setup.bash" ] || { echo "Super-LIO not built: $WS/install (run 'cd $WS && colcon build')" >&2; exit 1; }
 [ -f "$CFG" ] || { echo "config not found: $CFG" >&2; exit 1; }

@@ -8,7 +8,7 @@ against the original **FastReg** baseline:
 |---|---|---|
 | **Faster-LIO** | CPU iVox + iESKF | Docker (ROS 1 Noetic image) |
 | **GLIM** | GPU VGICP + factor graph | Docker + NVIDIA GPU + CUDA image (~14 GB) |
-| **Super-LIO** | CPU IESKF + OctVox + HKNN | ROS 2 Jazzy + `colcon` (built from the vendored `Super-LIO/`) |
+| **Super-LIO** | CPU IESKF + OctVox + HKNN | ROS 2 Jazzy + `colcon` (vendored `Super-LIO/`) — **or Docker** (`superlio:jazzy`, no host ROS 2) |
 
 Each backend produces the **same** `easting,northing` CSV that the snow-pole
 pipeline consumes unchanged, so they can be compared 1:1 on speed and accuracy.
@@ -118,11 +118,16 @@ deactivate
 
 ### 3.2 Per-backend stacks (only for the backend(s) you want to run)
 
-- **Super-LIO** — ROS 2 Jazzy host, then build the vendored source:
-  ```bash
-  sudo apt install -y python3-colcon-common-extensions ros-jazzy-pcl-ros libgflags-dev
-  cd Super-LIO && colcon build && cd ..
-  ```
+- **Super-LIO** — two options:
+  - **Docker (portable, no host ROS 2):** `./setup.sh --superlio-image` builds
+    `superlio:jazzy` from the vendored source; then run the pipeline with
+    `SUPERLIO_DOCKER=1` (see §4). This is the recommended path on a machine without
+    ROS 2 Jazzy.
+  - **Native (host ROS 2 Jazzy):**
+    ```bash
+    sudo apt install -y python3-colcon-common-extensions ros-jazzy-pcl-ros libgflags-dev
+    cd Super-LIO && colcon build && cd ..
+    ```
   Super-LIO consumes a **ROS 2 bag**, which is produced from the raw ROS 1 bag by a
   lightweight converter (uses only `.baginspect_venv`, **no Docker/GPU**). Run it once
   (needs the 41.24 GB bag downloaded); Super-LIO then reuses the result:
@@ -152,9 +157,10 @@ that does odometry → CSV bridge → snow-pole localization → final animation
 ```bash
 cd Snow-pole-based-vehicle-localization
 
-# Super-LIO  (fastest; CPU, ROS 2 Jazzy)
+# Super-LIO  (fastest; CPU)
 superlio_integration/run_full_pipeline_superlio.sh            # reuse CSV if present
-superlio_integration/run_full_pipeline_superlio.sh --from-bag # regenerate odometry
+superlio_integration/run_full_pipeline_superlio.sh --from-bag # regenerate odometry (native ROS 2)
+SUPERLIO_DOCKER=1 superlio_integration/run_full_pipeline_superlio.sh --from-bag  # odometry via Docker (no host ROS 2)
 
 # Faster-LIO (CPU, Docker ROS 1)
 fasterlio_integration/run_full_pipeline_fasterlio.sh [--from-bag]

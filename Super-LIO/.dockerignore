@@ -1,0 +1,7 @@
+# Only the source is needed to build the image; exclude generated/local trees.
+build/
+install/
+log/
+devel/
+.git/
+docs/

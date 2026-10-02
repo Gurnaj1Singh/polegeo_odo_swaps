@@ -18,9 +18,10 @@
 # Usage:
 #   ./setup.sh                      # venv + conda env + Super-LIO build + verify/guide
 #   ./setup.sh --apt                # also `sudo apt` the Super-LIO build deps
+#   ./setup.sh --superlio-image     # also build the Super-LIO Docker image (no host ROS 2 needed)
 #   ./setup.sh --fasterlio-image    # also build the Faster-LIO Docker image (ROS 1)
 #   ./setup.sh --glim-image[=gpu|cpu]  # also pull the GLIM Docker image (~10–15 GB)
-#   ./setup.sh --all-images         # both Docker images
+#   ./setup.sh --all-images         # all three Docker images
 #   ./setup.sh --skip-conda --skip-venv --skip-superlio   # opt out of pieces
 #   ./setup.sh -h | --help
 # =============================================================================
@@ -34,15 +35,16 @@ DATA_DIR="$SNOW/snow_pole_geo_localization_data"
 POLEGEO_PY="$HOME/miniconda3/envs/polegeo/bin/python"
 
 # ---- flags ------------------------------------------------------------------
-DO_APT=0 DO_FL_IMAGE=0 DO_GLIM_IMAGE="" SKIP_CONDA=0 SKIP_VENV=0 SKIP_SUPERLIO=0
+DO_APT=0 DO_SL_IMAGE=0 DO_FL_IMAGE=0 DO_GLIM_IMAGE="" SKIP_CONDA=0 SKIP_VENV=0 SKIP_SUPERLIO=0
 for a in "$@"; do
   case "$a" in
     --apt)              DO_APT=1 ;;
+    --superlio-image)   DO_SL_IMAGE=1 ;;
     --fasterlio-image)  DO_FL_IMAGE=1 ;;
     --glim-image)       DO_GLIM_IMAGE="gpu" ;;
     --glim-image=gpu)   DO_GLIM_IMAGE="gpu" ;;
     --glim-image=cpu)   DO_GLIM_IMAGE="cpu" ;;
-    --all-images)       DO_FL_IMAGE=1; DO_GLIM_IMAGE="gpu" ;;
+    --all-images)       DO_SL_IMAGE=1; DO_FL_IMAGE=1; DO_GLIM_IMAGE="gpu" ;;
     --skip-conda)       SKIP_CONDA=1 ;;
     --skip-venv)        SKIP_VENV=1 ;;
     --skip-superlio)    SKIP_SUPERLIO=1 ;;
@@ -133,6 +135,26 @@ if [ "$SKIP_SUPERLIO" -eq 0 ]; then
     fi
   else
     todo "ROS 2 Jazzy not installed (/opt/ros/jazzy). Install it (https://docs.ros.org/en/jazzy), then re-run to build Super-LIO."
+  fi
+fi
+
+# ---- 3b. Super-LIO Docker image (opt-in — portable, no host ROS 2 needed) ---
+if [ "$DO_SL_IMAGE" -eq 1 ]; then
+  hdr "Super-LIO Docker image (opt-in)"
+  if command -v docker >/dev/null 2>&1; then
+    if docker image inspect superlio:jazzy >/dev/null 2>&1; then
+      ok "Super-LIO image already built (superlio:jazzy)"
+    else
+      info "building superlio:jazzy from the vendored source (apt + colcon, a few minutes)…"
+      if docker build -t superlio:jazzy \
+           -f "$SNOW/superlio_integration/docker/Dockerfile" "$SUPERLIO"; then
+        ok "Super-LIO image built (superlio:jazzy) — run with SUPERLIO_DOCKER=1"
+      else
+        todo "Super-LIO image build failed — see superlio_integration/docker/Dockerfile"
+      fi
+    fi
+  else
+    todo "install Docker, then: ./setup.sh --superlio-image"
   fi
 fi
 
