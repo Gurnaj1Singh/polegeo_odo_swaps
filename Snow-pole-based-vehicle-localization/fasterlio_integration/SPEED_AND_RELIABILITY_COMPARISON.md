@@ -47,9 +47,9 @@ GNSS is injected — it is confirmed to run and, at 0 %, reproduces the odometry
 
 > Swapping FastReg → Faster-LIO keeps the **pipeline running time essentially unchanged
 > (~2 min for a 9-min drive)** while making the odometry **GNSS-free and real-time**.
-> At **0 % GNSS** the final localization is within ~2 m (8.4 → 10.1 m median) with a
-> **tighter worst case (65 → 26 m max)**; and once **any** GNSS is available, **Faster-LIO
-> is the more accurate backend at every level** (e.g. at 25 % GNSS: **0.61 vs 1.29 m**
+> At **0 % GNSS** the final localization is comparable (8.4 → 8.7 m median) with a
+> **tighter worst case (65 → 21 m max)**; and once **any** GNSS is available, **Faster-LIO
+> is the more accurate backend at every level** (e.g. at 25 % GNSS: **0.46 vs 1.29 m**
 > median — see the sweep in §3.4). The right trade for GNSS-limited Nordic roads.
 
 ---
@@ -126,15 +126,19 @@ comparison.
 
 ### 3.2 Final localization (snow-pole corrected) — the fair, like-for-like result
 
-| Proposed (pole-corrected) vs GNSS | median | mean | **max** | pole events |
-|---|---:|---:|---:|---:|
-| **FastReg** backend | **8.41 m** | 13.65 m | 64.61 m | 359 |
-| **Faster-LIO** backend | 10.11 m | **9.21 m** | **26.49 m** | 355 |
+| Proposed (pole-corrected) vs GNSS | median | mean | **max** | pole events | distinct poles |
+|---|---:|---:|---:|---:|---:|
+| **FastReg** backend | **8.41 m** | 13.65 m | 64.61 m | 359 | 151 |
+| **Faster-LIO** backend | **8.70 m** | **6.95 m** | **20.82 m** | 355 | 135 |
 
 **Reading:**
-- **Comparable accuracy:** the two backends land within ~1.7 m of each other on median.
-- **Faster-LIO is more *consistent*:** lower **mean** (9.2 vs 13.7 m) and a much tighter
-  **worst case** (26.5 vs 64.6 m). FastReg has a lower median but a heavier tail.
+- **Comparable accuracy:** the two backends land within ~0.3 m of each other on median.
+- **Faster-LIO is more *consistent*:** lower **mean** (7.0 vs 13.7 m) and a much tighter
+  **worst case** (20.8 vs 64.6 m) — FastReg has a comparable median but a much heavier tail.
+- **Events vs. distinct poles:** the "pole events" column counts geo-localization
+  *events* (one per surviving detection); a physical pole yields ~2–3 events as the
+  vehicle drives past, so the 355 Faster-LIO events map onto **135 distinct** ground-truth
+  poles (of 290). Each re-sighting is an independent correction.
 - **Faster-LIO does it GNSS-free:** it reaches ~10 m starting from 188 m of pure-odometry
   drift, whereas FastReg started from a GNSS-re-anchored 36 m. That the georeferenced snow
   poles pull 188 m → 10 m (a **~19× correction**) is exactly the framework working as
@@ -161,25 +165,25 @@ of frames snapped to the interpolated GNSS position; the rest dead-reckon on odo
 
 | GNSS % | GNSS fixes used | **FastReg** median (mean / max) [m] | **Faster-LIO** median (mean / max) [m] |
 |---:|---:|---:|---:|
-| **0 %** | 0 / 5419 | **8.41** (13.65 / 64.61) | 10.11 (9.21 / 26.49) |
-| 10 % | 561 | 2.13 (2.96 / 14.75) | **1.05** (2.09 / 15.19) |
-| 25 % | 1312 | 1.29 (1.80 / 11.07) | **0.61** (0.96 / 9.81) |
-| 50 % | 2669 | 0.53 (0.97 / 10.80) | **0.25** (0.46 / 9.22) |
+| **0 %** | 0 / 5419 | **8.41** (13.65 / 64.61) | 8.70 (6.95 / 20.82) |
+| 10 % | 561 | 2.13 (2.96 / 14.75) | **0.80** (1.33 / 11.80) |
+| 25 % | 1312 | 1.29 (1.80 / 11.07) | **0.46** (0.74 / 10.49) |
+| 50 % | 2669 | 0.53 (0.97 / 10.80) | **0.19** (0.36 / 9.15) |
 
 **This is the most important result of the comparison:**
-- **A little GNSS goes a long way for both:** even **10 %** GNSS collapses the error by ~4–10×
-  (FastReg 8.4 → 2.1 m; Faster-LIO 10.1 → **1.05 m**).
+- **A little GNSS goes a long way for both:** even **10 %** GNSS collapses the error by ~4–11×
+  (FastReg 8.4 → 2.1 m; Faster-LIO 8.7 → **0.80 m**).
 - **With *any* GNSS, Faster-LIO wins on every statistic** — median, mean *and* max — at 10 / 25 / 50 %
-  (e.g. at 25 %: 0.61 vs 1.29 m median). Faster-LIO is behind **only at exactly 0 %** GNSS, and
-  only by ~1.7 m.
+  (e.g. at 25 %: 0.46 vs 1.29 m median). FastReg and Faster-LIO are within ~0.3 m at exactly 0 %
+  GNSS (8.41 vs 8.70 m).
 - **Why:** the fused estimate depends on how faithfully the vehicle *dead-reckons between* GNSS
   fixes. Faster-LIO's IMU-fused, de-skewed local motion (~3.3 % RPE, §9.1 of the report) is more
   accurate locally than FastReg's LiDAR-only registration — so once periodic GNSS fixes reset the
   global position, Faster-LIO tracks ~2× tighter between them. FastReg's globally-bounded but
   locally-noisier track can't match it. **Faster-LIO + intermittent GNSS is the best of both worlds.**
 - Runtime was **flat across the sweep** (127–138 s, ~20 ms/frame) — GNSS fraction doesn't affect speed.
-- The odometry-only median is ~constant per backend (FastReg ~36 m, Faster-LIO ~188 m) since it's
-  the raw CSV vs GNSS, independent of the GNSS-injection fraction.
+- The odometry-only median is ~constant per backend (FastReg ~36 m, Faster-LIO ~118 m) since it's
+  measured at pole events vs the nearest ground-truth pole, independent of the GNSS-injection fraction.
 
 ![Pole-corrected error vs GNSS availability](output/sweep_error_vs_gnss.png)
 

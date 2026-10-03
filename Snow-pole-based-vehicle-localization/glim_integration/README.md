@@ -61,6 +61,26 @@ glim_integration/scripts/run_offline_bench.sh gpu   # prints REALTIME_FACTOR
 ```
 Compare to Faster-LIO ≈ 1.0× in `fasterlio_integration/SPEED_AND_RELIABILITY_COMPARISON.md`.
 
+## Results (0 % GNSS, measured on this bag/host)
+
+| Metric | GLIM | Faster-LIO (ref) |
+|---|---|---|
+| Pole-corrected vehicle error (median / mean / max) | **10.18 / 9.58 / 27.14 m** | 8.70 / 6.95 / 20.82 m |
+| Pole-localization error to nearest GT pole (median) | 2.65 m | 2.14 m |
+| Odometry-only error (median) | 170.15 m | 118.03 m |
+| GNSS sweep, pole-corrected median (10 / 25 / 50 %) | 1.14 / 0.63 / 0.26 m | 0.80 / 0.46 / 0.19 m |
+| Pole **detection events** / **distinct poles** (of 290) | **356 / 134** | 355 / 135 |
+
+**Distinct poles vs. detection events.** The pipeline logs one row per *detection
+event*, not per physical pole. A single pole produces several events because the vehicle
+drives *past* it: the YOLO detector re-acquires the **same physical pole on every frame
+it stays in view and within the 5 m range gate** — typically ~2–3 consecutive frames
+(mean **2.7 events/pole**, up to 5). Each re-sighting is an *independent* range+bearing
+fix that re-anchors the drifting dead-reckoned track, so all events are kept and the
+error is reported per **event**. GLIM's 356 events map onto **134 distinct ground-truth
+poles** (46 % of the 290 at the site); the rest were off the one-way traversed section.
+Full accounting + balance in **summary.md** §7.6.
+
 ## Notes / gotchas
 - **Disk**: the converted ROS2 bag is ~33 GB (`output/ros2_bag/`). Delete it after the
   run. `GLIM_BAG_COMPRESS=lz4 scripts/00_convert_bag.sh` trades disk for a slightly

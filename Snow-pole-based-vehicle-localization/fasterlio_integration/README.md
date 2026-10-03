@@ -153,15 +153,21 @@ compare against the **pole-corrected** output, not raw odometry, for a fair resu
 
 **End-to-end result (pole-corrected, run on this machine).** The full detection
 pipeline was executed on Faster-LIO odometry (YOLOv5 pole detection + geo-loc +
-pole-corrected dead-reckoning), **355 pole detections across 132 unique poles** (each pole
-seen in ~3 consecutive frames; 132 of 290 site poles were on the traversed section):
+pole-corrected dead-reckoning), producing **355 pole-detection *events* across 135
+distinct ground-truth poles** (of 290 at the site). A single physical pole yields
+several events because the vehicle drives *past* it: the detector re-acquires the same
+pole on every frame it stays in view and within the 5 m range gate — ~2–3 consecutive
+frames (mean **2.6 events/pole**, up to 5). Each re-sighting is an independent
+range+bearing fix that re-anchors the drifting dead-reckoned track, so all events are
+kept and the error is reported per **event**, not per unique pole (error measured at
+each event as distance to the nearest ground-truth pole):
 
-| Trajectory | Error vs GNSS (median / mean / max) |
+| Trajectory | Error (median / mean / max) |
 |---|---|
-| Faster-LIO odometry only | 447 / 789 / 2855 m |
-| **Proposed (pole-corrected)** | **8.6 / 6.8 / 16.0 m** |
+| Faster-LIO odometry only | 118.0 / 140.5 / 390.0 m |
+| **Proposed (pole-corrected)** | **8.7 / 7.0 / 20.8 m** |
 
-→ a **~24× reduction** in localization error from the snow-pole correction, i.e.
+→ a **~14× reduction** in localization error from the snow-pole correction, i.e.
 the framework works with Faster-LIO as the odometry backend. The ~9 m residual
 (vs the paper's sub-metre with partial GNSS) is because the pure-odometry yaw
 drift skews the *heading* used to dead-reckon between pole sightings; reducing the

@@ -66,14 +66,14 @@ tighter worst case**, and is **GNSS-free** while FastReg's trajectory is GNSS-an
 
 | GNSS injected | **FastReg** | **Faster-LIO** |
 |---|---:|---:|
-| 0 % | 8.41 | 10.11 |
-| 10 % | 2.13 | **1.05** |
-| 25 % | 1.29 | **0.61** |
-| 50 % | 0.53 | **0.25** |
+| 0 % | 8.41 | 8.70 |
+| 10 % | 2.13 | **0.80** |
+| 25 % | 1.29 | **0.46** |
+| 50 % | 0.53 | **0.19** |
 
 FastReg is ahead only at exactly 0 %; with **any** GNSS, Faster-LIO wins at every level
-(locally more accurate → dead-reckons better between fixes). (Faster-LIO sweep is the
-pfn2 run; the downsampled config matches it at 0 % and tracks the same with GNSS.)
+(locally more accurate → dead-reckons better between fixes). (Faster-LIO column is the
+current committed downsampled run; the base config tracks within run-to-run variance.)
 
 ## E. Poles
 
@@ -84,8 +84,13 @@ pfn2 run; the downsampled config matches it at 0 % and tracks the same with GNSS
 | of total site poles | 290 | 290 | 290 |
 | pole-localization error to nearest GT pole (median m) | 3.57 | 2.54 | **2.15** |
 
-Downsampled Faster-LIO localizes poles most accurately (2.15 m). All detection events
-are applied as path corrections; the unique poles are what "make the path accurate."
+Downsampled Faster-LIO localizes poles most accurately (2.15 m). **Events vs. unique
+poles:** a single physical pole produces several events because the vehicle drives
+*past* it — the detector re-acquires the same pole on every frame it stays in view and
+within the 5 m range gate (~2–3 consecutive frames, mean ~2.6 events/pole, up to 5). All
+events are applied as independent path corrections that re-anchor the drifting track;
+the **distinct** poles (135 of 290 for downsampled Faster-LIO) are what the events
+"make accurate." The error metric is computed over events, not unique poles.
 
 ## F. Raw odometry-only error, 0 % GNSS — NOT apples-to-apples
 
