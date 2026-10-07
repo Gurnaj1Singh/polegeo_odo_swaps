@@ -80,10 +80,14 @@ run-to-run spread of the drift process.
 | of total site poles                        | 290      | 290         |
 | pole-localization error to nearest GT pole | 2.54 m median | 2.15 m median |
 
-Each unique pole is seen over ~2–3 consecutive frames (≈355 events / ~134 poles).
-132–135 of the site's 290 poles fall on the traversed section (in-bounds frames).
-All 355 detection events are applied as path corrections; the ~134 unique poles
-are what "make the path accurate".
+**Why one pole becomes several events.** The vehicle drives *past* each pole, so the
+detector re-acquires the same physical pole on every frame it stays in view and within
+the 5 m range gate — ~2–3 consecutive frames (mean ~2.6 events/pole, up to 5). Each
+re-sighting is an *independent* range+bearing fix that re-anchors the drifting
+dead-reckoned track, so all 355 events are applied as path corrections and the error is
+reported per **event**, not per unique pole. The 355 events map onto **135 distinct**
+ground-truth poles (downsampled config) of the site's 290; the other ~155 poles are off
+the one-way traversed section.
 
 ### 4. Downstream pipeline (odometry-agnostic)
 Wall-clock 126.4 → 126.8 s (unchanged, as expected — the snow-pole detection +

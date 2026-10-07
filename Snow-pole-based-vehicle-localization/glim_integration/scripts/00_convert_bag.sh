@@ -34,6 +34,10 @@ COMPRESS="${GLIM_BAG_COMPRESS:-none}"
 [ -f "$BAG" ] || { echo "bag not found: $BAG" >&2; exit 1; }
 [ -x "$VENV/bin/rosbags-convert" ] || { echo "rosbags-convert not in $VENV" >&2; exit 1; }
 
+# output/ is absent on a fresh clone; create it before the DST check / df below so
+# `df -h "$INTEG/output"` doesn't fail fatally under `set -euo pipefail`.
+mkdir -p "$INTEG/output"
+
 if [ -e "$DST" ]; then
   if [ "$FORCE" -eq 1 ]; then echo "[00] removing existing $DST"; rm -rf "$DST";
   else echo "[00] $DST exists — pass --force to overwrite" >&2; exit 1; fi

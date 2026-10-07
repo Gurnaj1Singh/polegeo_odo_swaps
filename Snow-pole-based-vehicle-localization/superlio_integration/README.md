@@ -75,3 +75,27 @@ superlio_integration/scripts/40_gnss_sweep.sh            # 0/10/25/50% GNSS, see
 Run the speed-max variant explicitly:
 `scripts/00_run_superlio.sh <ros2_bag> 1.0 config/ouster_os2_128.yaml`.
 Full reasoning + the filter_rate experiment: `summary.md` Part K.
+
+## Results (default `filter_rate 2`, measured on this bag/host)
+
+| Metric | Super-LIO | Faster-LIO (ref) | GLIM (ref) |
+|---|---|---|---|
+| Odometry speed | **6.29 ms/scan, ~159 FPS** | 12.65 ms, 79 FPS (ds) | 37.7 ms, 26.5 FPS |
+| Pole-corrected error @0 % (median / mean / max) | 9.65 / 7.94 / 24.85 m | 8.70 / 6.95 / 20.82 m | 10.18 / 9.58 / 27.14 m |
+| GNSS sweep, pole-corrected median (10 / 25 / 50 %) | **0.91 / 0.53 / 0.20 m** ✅ | 0.80 / 0.46 / 0.19 m | 1.14 / 0.63 / 0.26 m |
+| Pole-localization error @0 % (median) | 2.26 m | 2.14 m | 2.65 m |
+| Pole **detection events** / **distinct poles** (of 290) | **355 / 131** | 355 / 135 | 356 / 134 |
+
+With any GNSS, Super-LIO is the most accurate backend; at 0 % the default `filter_rate 2`
+config gives 9.65 m (the old `filter_rate 4` speed variant regressed to 55.94 m — see
+`summary.md` Part K).
+
+**Distinct poles vs. detection events.** The pipeline writes one row per *detection
+event*, not per physical pole. One pole yields several events because the vehicle drives
+*past* it: the detector re-acquires the **same physical pole on every frame it stays in
+view and within the 5 m range gate** — ~2–3 consecutive frames (mean **2.7 events/pole**,
+median 3, up to 5; 20 poles seen only once). Each re-sighting is an *independent*
+range+bearing fix that re-anchors the drifting dead-reckoned track, so all events are
+kept and error is reported per **event**. Super-LIO's 355 events map onto **131 distinct
+ground-truth poles** (45 % of the 290 at the site); the rest were off the traversed
+one-way section. Full ledger + balance in `summary.md` §H.6.

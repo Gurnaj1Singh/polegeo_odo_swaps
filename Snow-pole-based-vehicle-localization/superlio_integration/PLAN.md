@@ -40,9 +40,11 @@ the strongest pure-CPU speed candidate. Goal: beat Faster-LIO's odometry through
 - [x] apt deps installed + `colcon build` (native ROS 2 Jazzy).
 - [x] odometry / bridge / pipeline / sweep run + `SUPERLIO_VS_FASTERLIO_COMPARISON.md`.
 
-**Result:** fastest backend (~194–271 FPS, ~2.5× Faster-LIO, ~7× GLIM; ~74 s wall
-vs 111–205 s), and most accurate with any GNSS (pole-corrected median 10 %/25 %/50 %
-= 0.97/0.57/0.21 m — best of all four). 0 % GNSS is the weak spot (vehicle 55.9 m;
-pole-loc still 3.5 m). Two local source mods were needed — see the comparison doc §5:
+**Result:** fastest backend — default `filter_rate 2` ~159 FPS (~2× Faster-LIO, ~6×
+GLIM; up to ~217 FPS with the `filter_rate 4` speed variant) — and most accurate with
+any GNSS (pole-corrected median 10 %/25 %/50 % = 0.91/0.53/0.20 m — best of all four).
+With the default config 0 % GNSS is competitive too (vehicle 9.65 m, pole-loc 2.26 m);
+the old `filter_rate 4` default regressed 0 % to 55.9 m (fixed — see comparison doc §5 /
+summary Part K). Two local source mods were needed — see the comparison doc §5:
 subscription QoS `best_effort→reliable` (else 35 % of scans drop under bag-play), and
 SIGINT the node binary / TERM the recorder in `00_run_superlio.sh`.

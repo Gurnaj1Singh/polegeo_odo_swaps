@@ -318,19 +318,20 @@ at ~1×). Run like-for-like (both offline / max speed), the CPU wins here.
 
 ### 7.2 Accuracy — pole-corrected median error vs GNSS availability (`GNSS_SEED=0`)
 
-| GNSS used | FastReg | Faster-LIO | **GLIM** (this run) | mean / max | poses w/ GNSS |
+| GNSS used | FastReg | Faster-LIO | **GLIM** (this run) | GLIM mean / max | poses w/ GNSS |
 |---|---|---|---|---|---|
-| 0 %  | 8.41 m | 10.11 m | **10.20 m** | 9.66 / 27.6 | 0 |
-| 10 % | 2.13 m | 1.05 m | **1.17 m** | 2.34 / 16.8 | 561 |
-| 25 % | 1.29 m | 0.61 m | **0.64 m** | 1.02 / 9.9 | 1312 |
-| 50 % | 0.53 m | 0.25 m | **0.26 m** | 0.48 / 9.2 | 2669 |
+| 0 %  | 8.41 m | 8.70 m | **10.18 m** | 9.58 / 27.1 | 0 |
+| 10 % | 2.13 m | 0.80 m | **1.14 m** | 2.24 / 16.6 | 561 |
+| 25 % | 1.29 m | 0.46 m | **0.63 m** | 1.00 / 9.9 | 1312 |
+| 50 % | 0.53 m | 0.19 m | **0.26 m** | 0.47 / 9.3 | 2669 |
 
-- **GLIM tracks Faster-LIO 1:1** across the whole sweep (within ~0.1 m at every level).
-  The GPU route costs no accuracy.
+- **GLIM closely tracks Faster-LIO** across the whole sweep (within ~0.1–0.3 m at each
+  GNSS level, ~1.5 m at the pathological 0 %). The GPU route costs essentially no
+  accuracy.
 - **0 % GNSS is the hardest case** for any LIO backend. Once ≥10 % GNSS is available the
   pole-correction collapses the error ~5–10× and both LIO backends beat FastReg.
 - The honest metric is **pole-corrected** error. GLIM's *raw* odometry-only median at
-  0 % is ~178 m (drift), corrected down to ~10 m by poles — a ~17× improvement.
+  0 % is ~170 m (drift), corrected down to ~10.2 m by poles — a ~17× improvement.
 
 ### 7.3 Raw odometry drift (odometry-vs-GNSS, start-anchored)
 
@@ -368,40 +369,50 @@ For **GLIM** (0 % GNSS):
 
 | Step | Count | Meaning |
 |---|---:|---|
-| Frames YOLO ran on | 2146 | in-bounds frames the detector saw |
-| **Raw detections (boxes)** | **2326** | every candidate box |
+| Frames YOLO ran on | 2147 | in-bounds frames the detector saw |
+| **Raw detections (boxes)** | **2328** | every candidate box |
 | — dropped: no 3-D point in box | 5 | no usable range return there |
-| — dropped: nearest point > 5 m | 1966 | false-positive gate |
-| **Used (geo-localized → CSV rows)** | **355** | = rows of `snowpole_results_glim.csv` |
-| Distinct ground-truth poles hit | 133 | of **290** poles at the site |
+| — dropped: nearest point > 5 m | 1967 | false-positive gate |
+| **Used (geo-localized → CSV rows)** | **356** | = rows of `snowpole_results_glim.csv` |
+| Distinct ground-truth poles hit | 134 | of **290** poles at the site |
 
-Balance: `2326 − 5 − 1966 = 355`. ✓ (The 355 events re-sight 133 distinct physical
-poles; the rest are repeat views of the same poles.)
+Balance: `2328 − 5 − 1967 = 356`. ✓
+
+**Why one pole becomes several events (and why that is intentional).** The vehicle
+drives *past* each pole, so the detector re-acquires the **same physical pole on every
+frame it stays in view and within the 5 m range gate** — typically ~2–3 consecutive
+frames (mean **2.7 events/pole**, median 3, up to 5; 23 poles seen only once). Each
+re-sighting is an *independent* range+bearing fix that re-anchors the drifting
+dead-reckoned track, so the pipeline keeps all of them and reports error over
+**events**, not unique poles. GLIM's 356 events map onto **134 distinct ground-truth
+poles** (46 % of the 290 at the site); the rest were off the traversed one-way section.
 
 Detection is **almost backend-independent** — it runs on the same camera/LiDAR
 images regardless of odometry. The only coupling is the *in-bounds* test, which uses
 the odometry-**predicted** vehicle position, so a few boundary frames differ per
 backend (hence the small spread below):
 
-| Backend | YOLO frames | raw boxes | drop (no-pt) | drop (>5 m) | **used** | distinct poles |
-|---|---:|---:|---:|---:|---:|---:|
-| Faster-LIO | 2141 | 2325 | 5 | 1965 | 355 | 135 |
-| **GLIM** | 2146 | 2326 | 5 | 1966 | **355** | 133 |
-| Super-LIO | 2139 | 2317 | 5 | 1956 | 356 | 133 |
+*(Super-LIO row is the default `filter_rate 2` config.)*
+
+| Backend | YOLO frames | raw boxes | drop (no-pt) | drop (>5 m) | **used events** | distinct poles | events/pole |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Faster-LIO | 2141 | 2325 | 5 | 1965 | 355 | 135 | 2.6 |
+| **GLIM** | 2147 | 2328 | 5 | 1967 | **356** | 134 | 2.7 |
+| Super-LIO | 2145 | 2326 | 5 | 1966 | 355 | 131 | 2.7 |
 
 **Check it yourself:**
 
 ```bash
 # USED count — always available (persistent artifacts):
-echo $(( $(wc -l < snowpole_results_glim.csv) - 1 ))                        # -> 355
+echo $(( $(wc -l < snowpole_results_glim.csv) - 1 ))                        # -> 356
 grep -E 'pole_detection_events|detection_frames' \
-     fasterlio_integration/output/timing_GLIM_pipeline_gnss0.json           # 355 ; 2146
+     fasterlio_integration/output/timing_GLIM_pipeline_gnss0.json           # 356 ; 2147
 
 # RAW + drop reasons — from the pipeline STDOUT (captured in the 0 % sweep log):
 LOG=glim_integration/output/sweep_glim_gnss0.log
-grep -c "sequence number used for geo localization" "$LOG"   # raw boxes  -> 2326
+grep -c "sequence number used for geo localization" "$LOG"   # raw boxes  -> 2328
 grep -c "no valid nearest point found"              "$LOG"   # no 3-D pt  -> 5
-grep -c "skipping this bounding box"                "$LOG"   # > 5 m gate -> 1966
+grep -c "skipping this bounding box"                "$LOG"   # > 5 m gate -> 1967
 
 # DISTINCT physical poles mapped:
 ~/miniconda3/envs/polegeo/bin/python -c "import pandas as pd; r=pd.read_csv('snowpole_results_glim.csv'); print(r[['Ground Truth Easting','Ground Truth Northing']].round(2).drop_duplicates().shape[0])"

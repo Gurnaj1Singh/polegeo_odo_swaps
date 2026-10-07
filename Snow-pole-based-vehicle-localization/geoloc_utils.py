@@ -90,8 +90,18 @@ def load_custom_model(model_path, confidence_threshold=0.7, backend='TkAgg'):
     Returns:
     model: The loaded YOLOv5 model with the confidence threshold set.
     """
-    # Load the custom model using the specified path
-    model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
+    # Load the custom model using the specified path.
+    # Pin the yolov5 hub ref to a specific commit so a fresh clone is reproducible:
+    # an unpinned 'ultralytics/yolov5' floats to master, whose hubconf imports
+    # symbols (e.g. ultralytics.utils.patches.torch_load) that must match the
+    # installed ultralytics. This commit's hubconf needs ultralytics>=8.4.65 and
+    # loads as AutoShape with the pinned ultralytics==8.4.171 (see environment.yml
+    # / setup_polegeo_env.sh). trust_repo/skip_validation keep the download
+    # unattended (no interactive trust prompt; commit SHAs fail torch's branch/tag
+    # fork-check otherwise).
+    model = torch.hub.load('ultralytics/yolov5:0675a31b96ad01746f8f29fe7f08d6a05200b370',
+                           'custom', path=model_path,
+                           trust_repo=True, skip_validation=True)
     
     # Change the matplotlib backend as per the argument
     matplotlib.use(backend)

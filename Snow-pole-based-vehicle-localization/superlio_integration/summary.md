@@ -43,7 +43,7 @@ replacement, **Super-LIO**.
 **Result:** Super-LIO is the **fastest** odometry we tested by a wide margin and the
 **most accurate at every GNSS level**. With the **default config (`filter_rate 2`)** it
 runs ~**159 FPS** (still ~2× Faster-LIO, ~6× GLIM) and scores **9.65 m at 0 % GNSS**
-and **0.98 / 0.57 / 0.21 m at 10/25/50 %** — on par with or better than Faster-LIO and
+and **0.91 / 0.53 / 0.20 m at 10/25/50 %** — on par with or better than Faster-LIO and
 GLIM across the board. (The old `filter_rate 4` config hit ~217 FPS but degraded the
 0 %-GNSS case to 55.94 m — that trade-off and its fix are documented in **Part K**.) It
 runs **natively (ROS 2 Jazzy) or in Docker** (`SUPERLIO_DOCKER=1`).
@@ -532,70 +532,80 @@ Measured on an i7-12700H laptop, CPU only. Two numbers are shown where they diff
 the figures reproduced in **this final session (2026-10-02)** and the **original
 study (2026-09-10)**; they agree closely.
 
-> **Config note:** the §H.1–H.2 Super-LIO numbers below are for the `filter_rate 4`
-> ("ds") config used throughout the original study. The **current default is
-> `filter_rate 2`**, which trades ~217→~159 FPS for a fixed 0 %-GNSS case
-> (55.94 → 9.65 m). See **Part K** for the side-by-side and the reasoning.
+> **Config note:** the §H Super-LIO numbers below are for the **current default
+> `filter_rate 2`** config. The `filter_rate 4` ("ds") speed-max variant from the
+> original study is faster (~217 vs ~159 FPS) but regresses the 0 %-GNSS case
+> (9.65 → 55.94 m). See **Part K** for the side-by-side and the reasoning.
 
 ### H.1 Speed — odometry throughput
 
 | Backend | Engine | ms/scan | Throughput |
 |---|---|---|---|
-| **Super-LIO** (ds) | CPU IESKF + OctVox(8 pt/vox) + HKNN | **4.41** | **~227 FPS (≈23×)** |
+| **Super-LIO** (default, `filter_rate 2`) | CPU IESKF + OctVox(8 pt/vox) + HKNN | **6.29** | **~159 FPS (≈16×)** |
+| Super-LIO (ds, `filter_rate 4`) | same | 4.41 | ~227 FPS (≈23×) |
 | Faster-LIO (ds) | CPU iVox + ESIKF | 12.65 | 79 FPS (7.9×) |
 | Faster-LIO (base) | CPU iVox + ESIKF | 21.35 | 47 FPS (4.7×) |
 | GLIM | GPU VGICP + factor graph | 37.7 | 26.5 FPS (2.65×) |
 
-Per-stage (this run): Undistort 0.30 · DownSample 0.46 · **Observe 3.05** ·
-UpdateMap 0.60 ms. The HKNN correspondence search (`Observe`) dominates — exactly the
-cost OctVox is built to attack — yet it's still tiny.
+Per-stage (default `filter_rate 2` run): Undistort 0.39 · DownSample 0.84 ·
+**Observe 4.11** · UpdateMap 0.95 ms. The HKNN correspondence search (`Observe`)
+dominates — exactly the cost OctVox is built to attack — yet it's still tiny. The denser
+`filter_rate 2` cloud raises `Observe` 3.05→4.11 ms vs the speed-max `filter_rate 4`
+variant; even so Super-LIO stays ~2× Faster-LIO and ~6× GLIM.
 
 ### H.2 Accuracy — pole-corrected vehicle position vs GNSS availability
 
 Median vehicle-position error (metres), identical pipeline, fixed seed:
 
+Super-LIO column is the **default `filter_rate 2`** config.
+
 | GNSS used | FastReg | Faster-LIO | GLIM | **Super-LIO** |
 |---|---|---|---|---|
-| 0 %  | 8.41 | 10.11 | 10.19 | **36.3** (orig. 55.9) |
-| 10 % | 2.13 | 1.05 | 1.13 | **0.98** ✅ |
-| 25 % | 1.29 | 0.61 | 0.64 | **0.57** ✅ |
-| 50 % | 0.53 | 0.25 | 0.26 | **0.21** ✅ |
+| 0 %  | 8.41 | 8.70 | 10.18 | **9.65** |
+| 10 % | 2.13 | 0.80 | 1.14 | **0.91** ✅ |
+| 25 % | 1.29 | 0.46 | 0.63 | **0.53** ✅ |
+| 50 % | 0.53 | 0.19 | 0.26 | **0.20** ✅ |
 
-**With any GNSS, Super-LIO is the most accurate of all four at every level.** Even
-10 % GNSS collapses its error ~37× (36 → 0.98 m). Only the artificial 0 % case is
-weak.
+**With the default `filter_rate 2` config Super-LIO is competitive at 0 % (9.65 m, on
+par with Faster-LIO/GLIM) and the most accurate with any GNSS** (best or tied at
+10/25/50 %). Even 10 % GNSS collapses its error ~11× (9.65 → 0.91 m). The old
+`filter_rate 4` speed variant regressed 0 % to 55.94 m — see Part K.
 
 ### H.3 Pole localization — the actual deliverable (0 % GNSS)
 
 Distance from each predicted pole to its ground-truth pole (this is the map the
 project exists to produce; independent of the vehicle-position metric):
 
-| Backend | median | mean | max | events |
-|---|---|---|---|---|
-| **Super-LIO** | **3.52 m** | 4.44 | 41.5 | 356 |
-| Faster-LIO | 2.50 m | 3.29 | 15.0 | 355 |
+| Backend | median | mean | max | events | distinct poles |
+|---|---|---|---|---|---|
+| **Super-LIO** (`filter_rate 2`) | **2.26 m** | 3.01 | 13.12 | 355 | 131 |
+| Faster-LIO | 2.14 m | 2.68 | 11.72 | 355 | 135 |
+| GLIM | 2.65 m | 3.46 | 15.18 | 356 | 134 |
 
-So even at 0 % GNSS the **pole map is good** (~3.5 m); the high 0 %-GNSS *vehicle*
-error does not wreck it, because at each pole sighting the position is re-fixed.
+So even at 0 % GNSS the **pole map is good** (~2.3 m); the 0 %-GNSS *vehicle* error does
+not wreck it, because at each pole sighting the position is re-fixed. The `events` column
+counts geo-localization *events*; a physical pole yields ~2–3 events (the vehicle drives
+past it), so Super-LIO's 355 events localize **131 distinct** ground-truth poles of 290.
 
 ### H.4 Raw trajectory drift (odometry vs GNSS, start-anchored)
 
 | Backend | median | mean | max | track-len ratio |
 |---|---|---|---|---|
-| Super-LIO | **~409 m** | ~778 | ~2849 | 0.90 |
-| Faster-LIO | 448 m | 790 | 2856 | 0.94 |
-| GLIM | 448 m | 755 | 2594 | 0.94 |
+| Super-LIO (`filter_rate 2`) | **~372 m** | ~694 | ~2547 | 0.922 |
+| Faster-LIO | 448 m | 790 | 2856 | 0.947 |
+| GLIM | 448 m | 755 | 2594 | 0.936 |
 
-Tightest median drift of the three (all are IMU-limited over multi-km with no GNSS).
-Clock fit residual 6.9 ms; 5409 poses; ~0.4 GB RAM.
+Tightest median drift of the three (all are IMU-limited over multi-km with no GNSS); the
+denser `filter_rate 2` cloud also holds along-track scale best of Super-LIO's two configs
+(0.922 vs 0.903 at `filter_rate 4`). Clock fit residual 6.9 ms; 5408 poses; ~0.4 GB RAM.
 
 ### H.5 This session's end-to-end run (2026-10-02) — everything green
 
-- Odometry: **226.6 FPS**, **5409 poses**, 0 dropped scans (at play rate 3.0).
+- Odometry (default `filter_rate 2`): **158.9 FPS** (6.29 ms/scan), **5408 poses**,
+  0 dropped scans (at play rate 3.0).
 - Bridge: clock residual 6.9 ms, 5422 rows, 0 NaNs.
-- Pipeline: 61.7 frames/s, YOLO ~23 ms/frame; odometry-only median **139.77 m**
-  (matches the documented 139.8 m).
-- GNSS sweep: 0/10/25/50 % → 36.29 / 0.98 / 0.57 / 0.21 m.
+- Pipeline: ~68 frames/s, YOLO ~20 ms/frame; odometry-only median **124.41 m**.
+- GNSS sweep: 0/10/25/50 % → **9.65 / 0.91 / 0.53 / 0.20 m**.
 - Visualization: valid H.264 MP4 + 4 summary PNGs + live map produced.
 
 ### H.6 Pole detection accounting (0 % GNSS run)
@@ -609,44 +619,55 @@ false-positive gate (`snowpole_based_vehicle_localization.py`). Survivors become
 physical pole is seen across many consecutive frames* (plus some false positives),
 the raw box count is ~6–7× the number actually used.
 
-For **Super-LIO** (0 % GNSS):
+For **Super-LIO** (0 % GNSS, default `filter_rate 2`):
 
 | Step | Count | Meaning |
 |---|---:|---|
-| Frames YOLO ran on | 2139 | in-bounds frames the detector saw |
-| **Raw detections (boxes)** | **2317** | every candidate box |
+| Frames YOLO ran on | 2145 | in-bounds frames the detector saw |
+| **Raw detections (boxes)** | **2326** | every candidate box |
 | — dropped: no 3-D point in box | 5 | no usable range return there |
-| — dropped: nearest point > 5 m | 1956 | false-positive gate |
-| **Used (geo-localized → CSV rows)** | **356** | = rows of `snowpole_results_superlio.csv` |
-| Distinct ground-truth poles hit | 133 | of **290** poles at the site |
+| — dropped: nearest point > 5 m | 1966 | false-positive gate |
+| **Used (geo-localized → CSV rows)** | **355** | = rows of `snowpole_results_superlio.csv` |
+| Distinct ground-truth poles hit | 131 | of **290** poles at the site |
 
-Balance: `2317 − 5 − 1956 = 356`. ✓ (The 356 events re-sight 133 distinct physical
-poles; the rest are repeat views of the same poles.)
+Balance: `2326 − 5 − 1966 = 355`. ✓
+
+**Why one pole becomes several events (and why that is intentional).** The vehicle
+drives *past* each pole, so the detector re-acquires the **same physical pole on every
+frame it stays in view and within the 5 m range gate** — typically ~2–3 consecutive
+frames (mean **2.7 events/pole**, median 3, up to 5; 20 poles seen only once). Each
+re-sighting is an *independent* range+bearing fix that re-anchors the drifting
+dead-reckoned track, so the pipeline keeps all of them and reports error over
+**events**, not unique poles. Super-LIO's 355 events map onto **131 distinct
+ground-truth poles** (45 % of the 290 at the site); the rest were off the traversed
+one-way section.
 
 Detection is **almost backend-independent** — it runs on the same camera/LiDAR
 images regardless of odometry. The only coupling is the *in-bounds* test, which uses
 the odometry-**predicted** vehicle position, so a few boundary frames differ per
 backend (hence the small spread below):
 
-| Backend | YOLO frames | raw boxes | drop (no-pt) | drop (>5 m) | **used** | distinct poles |
-|---|---:|---:|---:|---:|---:|---:|
-| Faster-LIO | 2141 | 2325 | 5 | 1965 | 355 | 135 |
-| GLIM | 2146 | 2326 | 5 | 1966 | 355 | 133 |
-| **Super-LIO** | 2139 | 2317 | 5 | 1956 | **356** | 133 |
+*(Super-LIO row is the default `filter_rate 2` config.)*
+
+| Backend | YOLO frames | raw boxes | drop (no-pt) | drop (>5 m) | **used events** | distinct poles | events/pole |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Faster-LIO | 2141 | 2325 | 5 | 1965 | 355 | 135 | 2.6 |
+| GLIM | 2147 | 2328 | 5 | 1967 | 356 | 134 | 2.7 |
+| **Super-LIO** | 2145 | 2326 | 5 | 1966 | **355** | 131 | 2.7 |
 
 **Check it yourself:**
 
 ```bash
 # USED count — always available (persistent artifacts):
-echo $(( $(wc -l < snowpole_results_superlio.csv) - 1 ))                    # -> 356
+echo $(( $(wc -l < snowpole_results_superlio.csv) - 1 ))                    # -> 355
 grep -E 'pole_detection_events|detection_frames' \
-     fasterlio_integration/output/timing_Super-LIO_pipeline_gnss0.json      # 356 ; 2139
+     fasterlio_integration/output/timing_Super-LIO_pipeline_gnss0.json      # 355 ; 2145
 
 # RAW + drop reasons — from the pipeline STDOUT (captured in the 0 % sweep log):
 LOG=superlio_integration/output/sweep_superlio_gnss0.log
-grep -c "sequence number used for geo localization" "$LOG"   # raw boxes  -> 2317
+grep -c "sequence number used for geo localization" "$LOG"   # raw boxes  -> 2326
 grep -c "no valid nearest point found"              "$LOG"   # no 3-D pt  -> 5
-grep -c "skipping this bounding box"                "$LOG"   # > 5 m gate -> 1956
+grep -c "skipping this bounding box"                "$LOG"   # > 5 m gate -> 1966
 
 # DISTINCT physical poles mapped:
 ~/miniconda3/envs/polegeo/bin/python -c "import pandas as pd; r=pd.read_csv('snowpole_results_superlio.csv'); print(r[['Ground Truth Easting','Ground Truth Northing']].round(2).drop_duplicates().shape[0])"

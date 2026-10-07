@@ -41,20 +41,28 @@ the same frames get GNSS at each level.
 
 | GNSS used | FastReg | Faster-LIO | **GLIM** |
 |---|---|---|---|
-| 0 %  | 8.41 m | 10.11 m | **10.19 m** |
-| 10 % | 2.13 m | 1.05 m | **1.13 m** |
-| 25 % | 1.29 m | 0.61 m | **0.64 m** |
-| 50 % | 0.53 m | 0.25 m | **0.26 m** |
+| 0 %  | 8.41 m | 8.70 m | **10.18 m** |
+| 10 % | 2.13 m | 0.80 m | **1.14 m** |
+| 25 % | 1.29 m | 0.46 m | **0.63 m** |
+| 50 % | 0.53 m | 0.19 m | **0.26 m** |
 
-(Pole-corrected median, metres. GLIM odometry-only median at 0 % = 171 m vs
-Faster-LIO 188 m — GLIM's raw trajectory is marginally tighter.)
+(Pole-corrected median, metres. GLIM odometry-only median at 0 % = 170 m vs
+Faster-LIO 118 m — both are IMU-limited drift, corrected downstream by the poles.)
 
-- **GLIM tracks Faster-LIO 1:1 across the whole sweep** (within 0.01–0.08 m at
-  every level) while running 2.6× faster — i.e. the speedup costs no accuracy.
+- **GLIM closely tracks Faster-LIO across the whole sweep** (within ~0.1–0.3 m at each
+  GNSS level; ~1.5 m at the pathological 0 %) — the speedup costs essentially no accuracy.
 - 0 % GNSS is the hardest case for any LIO backend; once ≥10 % GNSS is available
   the pole-correction collapses error ~5–10× and both GLIM and Faster-LIO beat
   FastReg. This reproduces the Faster-LIO study's finding, now for GLIM.
-- Pipeline wall-clock is odometry-agnostic (~126 s, 67 fps, YOLO ~20 ms/frame).
+- Pipeline wall-clock is odometry-agnostic (~130 s, 67 fps, YOLO ~20 ms/frame).
+
+**Distinct poles vs. detection events.** GLIM's run produces **356 geo-localization
+events across 134 distinct ground-truth poles** (of 290 at the site; Faster-LIO: 355
+events / 135 poles). One physical pole yields several events because the vehicle drives
+*past* it — the detector re-acquires the same pole on every frame it stays in view and
+within the 5 m range gate (~2–3 consecutive frames, mean **2.7 events/pole**, up to 5).
+Each re-sighting is an independent fix that re-anchors the drifting track, so all events
+are kept and the error is reported per event, not per unique pole.
 
 ## 3. Caveats / notes
 

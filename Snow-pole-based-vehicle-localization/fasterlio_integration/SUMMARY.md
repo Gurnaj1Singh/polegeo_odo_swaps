@@ -75,8 +75,8 @@ Inspect ROS1 bags on this ROS2 host with the repo-root `.baginspect_venv` (pure-
   8.4 m) but **tighter mean (~6.9 m) and worst case (~20 m)**, and it's **GNSS-free**
   (FastReg's shipped trajectory is GNSS-anchored to ~36–50 m, so raw odometry-only error
   — Faster-LIO ~113–118 m — is *not* apples-to-apples; use the pole-corrected metric).
-- **With any GNSS, Faster-LIO wins at every level** (10/25/50% → 1.05/0.61/0.25 m vs
-  2.13/1.29/0.53 m): locally more accurate ⇒ better dead-reckoning between fixes.
+- **With any GNSS, Faster-LIO wins at every level** (10/25/50% → 0.80/0.46/0.19 m vs
+  FastReg 2.13/1.29/0.53 m): locally more accurate ⇒ better dead-reckoning between fixes.
   FastReg leads *only* at exactly 0%.
 - **Poles:** localizes nearest GT pole to **~2.15 m median** (best of all configs).
 - **Bottom line:** Faster-LIO needs LiDAR+IMU but **no GPU**, is far faster per scan,
@@ -95,14 +95,25 @@ Faster-LIO (0% GNSS): **2325 raw boxes → −5 (no 3-D point) −1965 (>5 m gat
 used** (`= rows of snowpole_results_fasterlio.csv`), re-sighting **135 distinct**
 ground-truth poles of **290** at the site; YOLO ran on **2141** in-bounds frames.
 
-Detection is **almost backend-independent** (same camera/LiDAR images); only the
-in-bounds test uses the odometry-predicted position, so a few boundary frames differ:
+**Why one pole becomes several events (and why that is intentional).** The vehicle
+drives *past* each pole, so the detector re-acquires the **same physical pole on every
+frame it stays in view and within the 5 m range gate** — typically ~2–3 consecutive
+frames (mean **2.6 events/pole**, median 3, up to 5; 25 poles seen only once). Each
+re-sighting is an *independent* range+bearing fix that re-anchors the drifting
+dead-reckoned track, so the pipeline keeps all of them and reports error over
+**events**, not unique poles. The 355 events therefore map onto **135 distinct
+ground-truth poles** (47 % of the 290 at the site); the rest of the poles were off the
+traversed one-way section.
 
-| Backend | YOLO frames | raw boxes | drop (no-pt) | drop (>5 m) | **used** | distinct poles |
-|---|---:|---:|---:|---:|---:|---:|
-| **Faster-LIO** | 2141 | 2325 | 5 | 1965 | **355** | 135 |
-| GLIM | 2146 | 2326 | 5 | 1966 | 355 | 133 |
-| Super-LIO | 2139 | 2317 | 5 | 1956 | 356 | 133 |
+Detection is **almost backend-independent** (same camera/LiDAR images); only the
+in-bounds test uses the odometry-predicted position, so a few boundary frames differ.
+*(Super-LIO row is the default `filter_rate 2` config.)*
+
+| Backend | YOLO frames | raw boxes | drop (no-pt) | drop (>5 m) | **used events** | distinct poles | events/pole |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **Faster-LIO** | 2141 | 2325 | 5 | 1965 | **355** | 135 | 2.6 |
+| GLIM | 2147 | 2328 | 5 | 1967 | 356 | 134 | 2.7 |
+| Super-LIO | 2145 | 2326 | 5 | 1966 | 355 | 131 | 2.7 |
 
 **Check it yourself:**
 ```bash

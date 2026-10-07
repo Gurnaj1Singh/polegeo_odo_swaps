@@ -239,16 +239,17 @@ For **live plots**, drop `MPL_BACKEND=Agg` and add `LIVE_PLOT=1` (needs a deskto
 > YOLO detector measures **~20 ms/frame (~50 fps)**, confirming the 18 ms estimate below.
 
 ### 9.3 Final localization (snow-pole corrected) — Faster-LIO backend
-| Trajectory | Error vs GNSS (median / mean / max) |
+| Trajectory | Error (median / mean / max), distance to nearest GT pole |
 |---|---|
-| Faster-LIO odometry only | 447 / 789 / 2855 m |
-| **Proposed (pole-corrected)** | **8.6 / 6.8 / 16.0 m** |
+| Faster-LIO odometry only | 118.0 / 140.5 / 390.0 m |
+| **Proposed (pole-corrected)** | **8.7 / 7.0 / 20.8 m** |
 
-- **355 pole detections across 132 unique ground-truth poles** (each pole is seen in ~3
-  consecutive frames as the vehicle passes; 132 of the 290 site poles were traversed, over
-  frames ~835–2977 = the pole-instrumented section the vehicle drove through). The 355 is the
-  number of correction *events*, not unique poles (132 ≤ 290).
-- **~24× error reduction** from the snow-pole correction → the framework works with Faster-LIO.
+- **355 pole-detection *events* across 135 distinct ground-truth poles** (each pole is
+  seen in ~2–3 consecutive frames as the vehicle drives past; mean ~2.6 events/pole, up
+  to 5; 135 of the 290 site poles were traversed, over frames ~835–2977 = the
+  pole-instrumented section). The 355 is the number of correction *events* — each
+  re-sighting is an independent fix — not unique poles (135 ≤ 290).
+- **~14× error reduction** from the snow-pole correction → the framework works with Faster-LIO.
 - Detection uses the **pretrained YOLOv5** model (`model/pole_best_signal.pt`, 18 ms/frame on this CPU).
 - GNSS was used **only** for the initial fix + evaluation (0 % GNSS during the drive; verified via the
   GNSS-percentage variant: GNSS Count 0 / Predictive Count 5419 → 8.87 m, consistent).
