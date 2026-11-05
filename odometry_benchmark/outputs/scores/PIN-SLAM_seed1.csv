@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,1.58,2.85,19.13,300.21,315.81,2149,550,4869,PIN-SLAM
+25.0,0.78,1.37,14.35,300.71,316.48,2152,1359,4060,PIN-SLAM
+50.0,0.34,0.59,10.01,300.84,316.71,2153,2693,2726,PIN-SLAM

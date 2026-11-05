@@ -1,0 +1,8 @@
+{
+  "method": "kiss_icp",
+  "n_scans": 5419,
+  "ms_per_scan_mean": 10.88,
+  "ms_per_scan_median": 10.88,
+  "fps": 91.9,
+  "threads": 4
+}

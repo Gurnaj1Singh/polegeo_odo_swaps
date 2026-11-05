@@ -1,0 +1,37 @@
+lio:
+  deskew: true
+  max_iterations: 100
+  voxel_size: 1.0
+  max_range: 150.0
+  min_range: 2.0
+  convergence_criterion: 1.0e-05
+  max_correspondence_distance: 0.5
+  max_num_threads: 0
+  initialization_phase: true
+  max_expected_jerk: 3.0
+  double_downsample: true
+  min_beta: 200.0
+lidar_timestamps:
+  multiplier_to_seconds: 1.0e-09
+  force_absolute: false
+  force_relative: true
+extrinsic_imu2base_quat_xyzw_xyz:
+- 0.0
+- 0.0
+- 0.0
+- 1.0
+- 0.006253
+- -0.011775
+- 0.007645
+extrinsic_lidar2base_quat_xyzw_xyz:
+- 0.0
+- 0.0
+- 0.0
+- 1.0
+- 0.0
+- 0.0
+- 0.0
+viz: false
+dump_deskewed_scans: false
+log_dir: outputs/rko_lio
+run_name: rko_lio

@@ -1,0 +1,7 @@
+method,gnss_pct,median_err_m,n_snaps,wrong_assoc_pct,first_wrong_frame,err_before_snap_median_correct_m,err_before_snap_median_wrong_m,err_after_snap_median_correct_m
+FastReg,0,11.26,481,82.7,829,1.02,10.21,0.75
+FastReg,10,2.11,473,27.7,851,0.96,8.48,0.97
+FAST-LIO2,0,10.03,478,71.1,865,0.8,10.24,0.84
+FAST-LIO2,10,1.24,473,17.3,1365,0.72,7.94,0.83
+Faster-LIO,0,8.63,478,67.4,865,0.75,10.01,0.83
+Faster-LIO,10,0.86,473,6.6,1365,0.67,1.78,0.78

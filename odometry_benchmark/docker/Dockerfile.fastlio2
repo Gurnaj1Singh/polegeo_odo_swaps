@@ -1,0 +1,26 @@
+# FAST-LIO2 (Xu et al., T-RO 2022) on top of the Faster-LIO image (same ROS 1 Noetic, PCL, Eigen).
+# Upstream hku-mars/FAST_LIO pinned to a commit. livox_ros_driver is only needed for its message
+# types, so a messages-only package is built from the driver's msg/ files (no Livox SDK).
+#   docker build -t fastlio2:noetic -f docker/Dockerfile.fastlio2 docker
+FROM fasterlio:noetic
+SHELL ["/bin/bash", "-lc"]
+WORKDIR /root/ws_fl2/src
+RUN git clone https://github.com/Livox-SDK/livox_ros_driver.git /tmp/livox \
+    && git -C /tmp/livox checkout 3d240d5666129e1a3052e78ee8487a04b08fdda3 \
+    && mkdir -p livox_ros_driver && cp -r /tmp/livox/livox_ros_driver/msg livox_ros_driver/ && rm -rf /tmp/livox \
+    && printf '%s\n' 'cmake_minimum_required(VERSION 3.0.2)' 'project(livox_ros_driver)' \
+         'find_package(catkin REQUIRED COMPONENTS message_generation std_msgs)' \
+         'add_message_files(FILES CustomPoint.msg CustomMsg.msg)' \
+         'generate_messages(DEPENDENCIES std_msgs)' 'catkin_package(CATKIN_DEPENDS message_runtime std_msgs)' \
+         > livox_ros_driver/CMakeLists.txt \
+    && printf '%s\n' '<?xml version="1.0"?>' '<package format="2"><name>livox_ros_driver</name><version>2.0.0</version>' \
+         '<description>Livox message types only</description><maintainer email="none@example.com">none</maintainer><license>MIT</license>' \
+         '<buildtool_depend>catkin</buildtool_depend><depend>std_msgs</depend>' \
+         '<build_depend>message_generation</build_depend><exec_depend>message_runtime</exec_depend></package>' \
+         > livox_ros_driver/package.xml
+RUN git clone https://github.com/hku-mars/FAST_LIO.git \
+    && git -C FAST_LIO checkout 7cc4175de6f8ba2edf34bab02a42195b141027e9 \
+    && git -C FAST_LIO submodule update --init
+WORKDIR /root/ws_fl2
+RUN source /opt/ros/noetic/setup.bash && catkin_make -DCMAKE_BUILD_TYPE=Release -j2
+WORKDIR /work

@@ -1,0 +1,8 @@
+{
+  "method": "genz_icp",
+  "n_scans": 5419,
+  "ms_per_scan_mean": 259.0,
+  "ms_per_scan_median": 166.17,
+  "fps": 3.9,
+  "threads": 1
+}

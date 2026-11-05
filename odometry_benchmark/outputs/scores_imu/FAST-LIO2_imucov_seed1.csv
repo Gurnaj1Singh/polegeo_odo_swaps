@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,1.29,2.95,27.55,228.32,290.46,2150,550,4869,FAST-LIO2_imucov
+25.0,0.7,1.35,15.0,228.76,290.97,2152,1359,4060,FAST-LIO2_imucov
+50.0,0.37,0.63,13.06,228.97,291.23,2153,2693,2726,FAST-LIO2_imucov

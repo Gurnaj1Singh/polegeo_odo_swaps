@@ -1,0 +1,2 @@
+https://github.com/DUTRobot/CLID-SLAM @ 5c4f9e720c716c1f18c3b189c37cc88cacf48e84 (2026-02-26), MIT
+CRLF converted to LF (Windows clone with core.autocrlf=true).

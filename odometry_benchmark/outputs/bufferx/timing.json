@@ -1,0 +1,9 @@
+{
+  "method": "bufferx",
+  "n_scans": 5419,
+  "ms_per_scan_mean": 2149.3,
+  "ms_per_scan_median": 2171.37,
+  "fps": 0.5,
+  "registration_failures": 0,
+  "checkpoint": "snapshot/kitti"
+}

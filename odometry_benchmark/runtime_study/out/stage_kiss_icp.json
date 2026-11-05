@@ -1,0 +1,14 @@
+{
+  "pole": 41.832573100109585,
+  "loop": 70.3977658005897,
+  "frames_in_section": 2151,
+  "boxes": 2330,
+  "n_frames": 5420,
+  "odom_csv": "D:/Odometry/odometry_benchmark/outputs/csv/incremental_navigation_results_kiss_icp.csv",
+  "gnss_percentage": 0.0,
+  "vehicle": 28.56519270048011,
+  "pole_ms_per_frame_all": 7.7181869188394066,
+  "vehicle_ms_per_frame_all": 5.270330756546146,
+  "pole_ms_per_frame_section": 19.447965179037464,
+  "vehicle_ms_per_frame_section": 13.279959414449145
+}

@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,0.82,1.22,12.19,96.03,108.53,2153,543,4876,Faster-LIO_rate25
+25.0,0.42,0.65,12.19,96.03,108.53,2153,1340,4079,Faster-LIO_rate25
+50.0,0.17,0.37,11.43,96.03,108.53,2153,2710,2709,Faster-LIO_rate25

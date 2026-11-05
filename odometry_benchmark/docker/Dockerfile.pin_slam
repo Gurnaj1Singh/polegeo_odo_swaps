@@ -1,0 +1,15 @@
+# PIN-SLAM (PRBonn, T-RO 2024) on PyTorch 2.8 + CUDA 12.8 (RTX 50xx / sm_120).
+# Pure PyTorch, no custom CUDA kernels; source vendored in third_party/PIN_SLAM.
+#   docker build -t pin_slam:cu128 -f docker/Dockerfile.pin_slam .
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libgomp1 libglib2.0-0 git \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir numpy==1.26.4 evo==1.28.0 gtsam==4.2 laspy==2.5.3 natsort==8.1.0 \
+        open3d==0.19.0 pypose==0.6.8 pyquaternion==0.9.9 rich==12.5.1 roma==1.5.0 scikit-image==0.25.2 \
+        dtyper==2.5.1 opencv-python-headless rosbags==0.9.23 pandas wandb==0.19.0 "matplotlib<3.9"
+COPY third_party/PIN_SLAM /opt/pin_slam
+# PIN-SLAM logs `git rev-parse HEAD`; the vendored copy has no history (upstream commit is in
+# VENDORED_FROM.txt), so make it a one-commit repo instead of patching the source.
+RUN cd /opt/pin_slam && git init -q && git add -A \
+    && git -c user.name=bench -c user.email=bench@local commit -qm "vendored $(cat VENDORED_FROM.txt)"
+WORKDIR /opt/pin_slam

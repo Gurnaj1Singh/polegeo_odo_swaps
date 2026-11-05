@@ -1,0 +1,4 @@
+9f56beabbc535f3a65d4cf1c6123a3cfe533d5e63606592d86f9fe9823dbc052 *2024-02-28-12-59-51.bag
+41a427982fa1d70a3658f4ff9b35364e16d60b4805baaa3be345e288fac38550 *2024-02-28-12-59-51_no_unwanted_topics.bag
+80b7be7c1f206bec459e50f92fe09b2f9970d081a6d504119506cd2e24c84f87 *../Trip068.json
+64531dcbf82d634ef61bfaa936fdafca26fe44b93ca3cd8a7d23daa7efa3bac6 *../Groundtruth_pole_location_at_test_site_E39_Hemnekjlen.csv

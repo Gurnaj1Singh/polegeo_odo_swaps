@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,1.11,2.33,26.81,192.96,233.21,2150,550,4869,FAST-LIO2_biasfix
+25.0,0.63,1.1,14.18,193.27,233.61,2152,1359,4060,FAST-LIO2_biasfix
+50.0,0.31,0.53,12.83,193.43,233.8,2153,2693,2726,FAST-LIO2_biasfix

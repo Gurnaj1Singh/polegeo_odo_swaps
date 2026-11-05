@@ -1,0 +1,21 @@
+
+==========
+== CUDA ==
+==========
+
+CUDA Version 12.8.1
+
+Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+By pulling and using the container, you accept the terms and conditions of this license:
+https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+Traceback (most recent call last):
+  File "/opt/hiloam/Hi_LOAM/Hi_LOAM.py", line 15, in <module>
+    from utils.incre_learning import cal_feature_importance
+  File "/opt/hiloam/Hi_LOAM/utils/incre_learning.py", line 3, in <module>
+    from model.feature_octree import FeatureOctree
+ModuleNotFoundError: No module named 'model'

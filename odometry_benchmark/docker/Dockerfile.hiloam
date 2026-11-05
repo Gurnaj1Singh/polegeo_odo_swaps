@@ -1,0 +1,13 @@
+# Hi-LOAM (Yang et al., IEEE TMM 2026) on PyTorch 2.8 + CUDA 12.8 (RTX 50xx / sm_120).
+# The README targets torch 1.12 + kaolin 0.12 (no Blackwell support); NVIDIA's official
+# kaolin 0.18.0 wheel for torch 2.8 / cu128 is used instead. Source in third_party/Hi-LOAM.
+#   docker build -t hiloam:cu128 -f docker/Dockerfile.hiloam .
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libgomp1 libglib2.0-0 git \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir kaolin==0.18.0 \
+        -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.8.0_cu128.html
+RUN pip install --no-cache-dir open3d==0.19.0 scikit-image wandb tqdm natsort pyquaternion pandas \
+        roma pyyaml matplotlib
+COPY third_party/Hi-LOAM /opt/hiloam
+WORKDIR /opt/hiloam/Hi_LOAM

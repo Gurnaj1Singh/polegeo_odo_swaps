@@ -1,0 +1,30 @@
+# PIN-SLAM (Pan et al., T-RO 2024) on SnowPole: the repository's general config
+# (config/lidar_slam/run.yaml) with the shared 2-150 m range and loop closure / pose-graph
+# optimisation removed (no `pgo:` section -> pgo_on = False), so it is pure odometry like
+# every other method in the benchmark.
+setting:
+  name: "pin_slam_snowpole"
+  output_root: "/work/outputs/pin_slam"
+  deskew: True
+process:
+  min_range_m: 2.0
+  max_range_m: 150.0
+sampler:
+  surface_sample_range_m: 0.25
+neuralpoints:
+  voxel_size_m: 0.4
+  search_alpha: 0.5
+continual:
+  batch_size_new_sample: 1000
+  pool_capacity: 1e7
+  pool_filter_freq: 10
+tracker:
+  source_vox_down_m: 0.6
+  iter_n: 50
+  valid_nn_k: 5
+optimizer:
+  batch_size: 10000
+  adaptive_iters: True
+eval:
+  wandb_vis_on: False
+  silence_log: True

@@ -1,0 +1,2 @@
+https://github.com/peakpang/UGP @ 0a1d9fd368d26588fd4fc567d7d9a3c1fd3af913 (2026-04-14)
+weights: Google Drive folder 1XbwTou-bINwVy1RtdxNSUJ16Qlf-uPTw (README), downloaded 2026-10-31

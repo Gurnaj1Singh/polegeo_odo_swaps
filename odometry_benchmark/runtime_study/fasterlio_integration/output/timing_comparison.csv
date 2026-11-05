@@ -1,0 +1,3 @@
+odometry,gnss_percentage,label,timestamp,host,cpu_count,wall_clock_s,frames_total,pole_detection_events,detection_frames,detection_ms_mean,detection_ms_median,detection_ms_p95,detection_fps,stage_model_load_s,stage_bag_load_s,stage_loop_s,pipeline_fps,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,err_odom_max,gnss_used_count,predictive_count
+FastReg,0.0,gnss_percentage,2026-11-05T02:37:37,LAPTOP-GH16JKIB,24,134.67,5420,,2151,9.26,8.19,13.59,108.04,3.01,37.41,70.41,76.98,7.7,6.41,17.88,91.86,96.62,217.33,0,5419
+FastReg,0.0,gnss_percentage,2026-11-05T02:40:11,LAPTOP-GH16JKIB,24,142.46,5420,,2173,9.36,8.31,13.36,106.8,2.75,36.76,78.18,69.32,11.01,12.38,48.6,444.86,432.24,909.26,0,5419

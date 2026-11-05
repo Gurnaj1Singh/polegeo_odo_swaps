@@ -1,0 +1,16 @@
+# Splat-LOAM (Giacomini et al., ICCV 2025) on PyTorch 2.8 + CUDA 12.8 (RTX 50xx / sm_120).
+# The repository's Dockerfile (third_party/Splat-LOAM/Dockerfile) targets CUDA 11.8 / torch 2.3.1,
+# which cannot run on Blackwell; same steps here on the cu128 base: build the three vendored
+# submodules (spherical surfel rasteriser, simple-knn, gsaligner) for sm_120, then the runtime deps
+# at the versions the repository pins.
+#   docker build -t splatloam:cu128 -f docker/Dockerfile.splatloam .
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+RUN apt-get update && apt-get install -y --no-install-recommends git libeigen3-dev libgl1 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+ENV TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=1
+COPY third_party/Splat-LOAM /workspace/repository
+WORKDIR /workspace/repository/submodules
+RUN pip install --no-cache-dir --no-build-isolation diff-surfel-spherical-rasterization/ simple-knn/ gsaligner/
+RUN pip install --no-cache-dir pyprojections==0.0.3 rosbags==0.10.9 "typer[all]" omegaconf matplotlib \
+        pytransform3d plyfile natsort open3d==0.19.0 rerun-sdk==0.23.3 evo
+WORKDIR /workspace/repository

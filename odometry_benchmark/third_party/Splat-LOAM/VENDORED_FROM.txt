@@ -1,0 +1,4 @@
+https://github.com/rvp-group/Splat-LOAM @ d82680d5959651e70fc94bb1a64b5044f146571a (2025-11-29)
+  submodule  5f8175929b02b555a95d3e7cb0c44bc41c060478 submodules/diff-surfel-spherical-rasterization (heads/main)
+  submodule  99b0dbbc000413e291ba52b1fd615283b61944eb submodules/gsaligner (heads/main)
+  submodule  86710c2d4b46680c02301765dd79e465819c8f19 submodules/simple-knn (heads/main)

@@ -1,0 +1,5 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+0.0,10.03,11.44,43.27,183.88,221.3,2167,0,5419,GLIM
+10.0,1.23,2.39,15.32,181.73,218.58,2152,561,4858,GLIM
+25.0,0.69,1.12,12.74,182.33,218.84,2148,1312,4107,GLIM
+50.0,0.32,0.55,12.74,181.73,218.58,2152,2669,2750,GLIM

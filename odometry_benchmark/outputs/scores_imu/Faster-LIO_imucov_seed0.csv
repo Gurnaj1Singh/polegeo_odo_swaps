@@ -1,0 +1,7 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+0.0,9.64,10.79,43.05,145.93,181.81,2161,0,5419,Faster-LIO_imucov
+2.0,2.95,5.63,39.48,143.09,178.8,2149,108,5311,Faster-LIO_imucov
+5.0,1.38,2.77,14.45,143.09,178.88,2151,309,5110,Faster-LIO_imucov
+10.0,1.03,1.92,13.01,143.22,179.03,2152,561,4858,Faster-LIO_imucov
+25.0,0.6,0.94,12.5,143.22,179.03,2152,1312,4107,Faster-LIO_imucov
+50.0,0.27,0.47,12.5,143.22,179.03,2152,2669,2750,Faster-LIO_imucov

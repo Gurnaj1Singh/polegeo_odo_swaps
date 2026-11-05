@@ -1,0 +1,39 @@
+
+==========
+== CUDA ==
+==========
+
+CUDA Version 12.8.1
+
+Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+By pulling and using the container, you accept the terms and conditions of this license:
+https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+/opt/fastreg/lib/pointnet2/pointnet2_utils.py:25: UserWarning: The torch.cuda.*DtypeTensor constructors are no longer recommended. It's best to use methods such as torch.tensor(data, dtype=*, device='cuda') to create tensors. (Triggered internally at /pytorch/torch/csrc/tensor/python_tensor.cpp:78.)
+  output = torch.cuda.IntTensor(B, npoint)
+[fastreg] scan 250/5419  pos [65.1  1.4  4.7]  252 ms/pair
+[fastreg] scan 500/5419  pos [104.6 -29.8  12.7]  250 ms/pair
+[fastreg] scan 750/5419  pos [ 513.6 -130.    62.6]  259 ms/pair
+[fastreg] scan 1000/5419  pos [ 933.5 -400.6  179.4]  255 ms/pair
+[fastreg] scan 1250/5419  pos [1398.9 -561.3  317.2]  255 ms/pair
+[fastreg] scan 1500/5419  pos [1862.7 -593.5  478.5]  259 ms/pair
+[fastreg] scan 1750/5419  pos [2295.7 -333.6  563. ]  252 ms/pair
+[fastreg] scan 2000/5419  pos [2569.3  102.8  511.5]  250 ms/pair
+[fastreg] scan 2250/5419  pos [2672.9  591.8  362. ]  253 ms/pair
+[fastreg] scan 2500/5419  pos [2708.1 1061.8  191.5]  259 ms/pair
+[fastreg] scan 2750/5419  pos [2837.7 1500.8  104.2]  260 ms/pair
+[fastreg] scan 3000/5419  pos [3112.3 1897.9  145.5]  256 ms/pair
+[fastreg] scan 3250/5419  pos [3294.6 2374.1  101.6]  254 ms/pair
+[fastreg] scan 3500/5419  pos [3598.7 2785.2  184.2]  252 ms/pair
+[fastreg] scan 3750/5419  pos [3672.1 3270.3   33.6]  253 ms/pair
+[fastreg] scan 4000/5419  pos [3472.4 3642.2 -270.4]  252 ms/pair
+[fastreg] scan 4250/5419  pos [3569.3 4142.4 -380.2]  251 ms/pair
+[fastreg] scan 4500/5419  pos [3625.9 4652.8 -457.9]  252 ms/pair
+[fastreg] scan 4750/5419  pos [3548.1 5143.1 -585.8]  254 ms/pair
+[fastreg] scan 5000/5419  pos [3644.1 5644.8 -601.7]  253 ms/pair
+[fastreg] scan 5250/5419  pos [3833.  6122.2 -532. ]  256 ms/pair
+{'method': 'fastreg', 'n_scans': 5419, 'ms_per_scan_mean': np.float64(254.03), 'ms_per_scan_median': np.float64(253.05), 'fps': np.float64(3.9), 'gpu': 'NVIDIA GeForce RTX 5050 Laptop GPU'}

@@ -1,0 +1,6 @@
+{
+  "raw_vs_gnss_mean_m": 876.87,
+  "raw_vs_gnss_median_m": 506.66,
+  "raw_vs_gnss_max_m": 3135.91,
+  "n_poses": 5416
+}

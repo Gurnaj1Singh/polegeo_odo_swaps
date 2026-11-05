@@ -1,0 +1,7 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+0.0,10.0,11.37,44.7,204.87,246.1,2162,0,5419,FAST-LIO2_init6s
+2.0,3.79,6.68,39.87,200.94,241.69,2145,108,5311,FAST-LIO2_init6s
+5.0,1.86,3.57,18.33,201.29,242.29,2151,309,5110,FAST-LIO2_init6s
+10.0,1.25,2.47,15.33,201.46,242.49,2152,561,4858,FAST-LIO2_init6s
+25.0,0.68,1.14,12.89,201.63,242.56,2151,1312,4107,FAST-LIO2_init6s
+50.0,0.33,0.55,12.89,201.46,242.49,2152,2669,2750,FAST-LIO2_init6s

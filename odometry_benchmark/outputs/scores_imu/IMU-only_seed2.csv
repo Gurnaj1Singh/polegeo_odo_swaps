@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,7.82,20.33,219.22,1440.84,1935.15,2136,543,4876,IMU-only
+25.0,3.25,7.22,91.09,1454.04,1959.13,2146,1340,4079,IMU-only
+50.0,0.8,2.93,59.56,1459.16,1970.51,2152,2710,2709,IMU-only

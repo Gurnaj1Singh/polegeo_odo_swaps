@@ -1,0 +1,36 @@
+# FAST-LIO2 on SnowPole (Ouster OS2-128 + its IMU). Same values as Faster-LIO's
+# ouster_os2_128_offline_ds.yaml (reference repo) so the two IEKF-ikd/iVox siblings are compared like for like.
+common:
+    lid_topic: "/ouster/points"
+    imu_topic: "/ouster/imu"
+    time_sync_en: false
+    time_offset_lidar_to_imu: 0.0
+
+preprocess:
+    lidar_type: 3                # Ouster
+    scan_line: 128
+    timestamp_unit: 3            # Ouster per-point t is in ns
+    blind: 2.0
+
+mapping:
+    acc_cov: 0.1
+    gyr_cov: 0.1
+    b_acc_cov: 0.0001
+    b_gyr_cov: 0.0001
+    fov_degree: 180
+    det_range: 150.0
+    extrinsic_est_en: false
+    extrinsic_T: [ -0.006253, 0.011775, -0.007645 ]
+    extrinsic_R: [ 1, 0, 0,
+                   0, 1, 0,
+                   0, 0, 1 ]
+
+publish:
+    path_en: false
+    scan_publish_en: false
+    dense_publish_en: false
+    scan_bodyframe_pub_en: false
+
+pcd_save:
+    pcd_save_en: false
+    interval: -1

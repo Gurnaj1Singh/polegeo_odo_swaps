@@ -1,0 +1,8 @@
+{
+  "n_scans": 5416,
+  "ms_per_scan_mean": 10.65,
+  "ms_per_scan_median": 10.42,
+  "ms_per_scan_p95": 16.31,
+  "preprocess_ms_mean": 2.89,
+  "scope": "FAST-LIO2 'total time' per scan (IMU propagation + undistort + downsample + IEKF + map update; excl. point-cloud preprocessing in the ROS callback, reported separately)"
+}

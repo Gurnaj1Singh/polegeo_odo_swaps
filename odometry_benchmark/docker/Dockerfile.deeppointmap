@@ -1,0 +1,17 @@
+# DeepPointMap (Zhang et al., AAAI 2024) on PyTorch 2.8 + CUDA 12.8 (RTX 50xx / sm_120).
+# pytorch3d has no prebuilt package for this stack, so v0.7.8 is compiled for sm_120.
+#   docker build -t deeppointmap:cu128 -f docker/Dockerfile.deeppointmap .
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libgomp1 libglib2.0-0 git \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir colorlog easydict matplotlib networkx open3d==0.19.0 opencv-python-headless \
+        pyquaternion pyyaml readerwriterlock scipy tqdm
+RUN FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=1 \
+    pip install --no-cache-dir --no-build-isolation "git+https://github.com/facebookresearch/pytorch3d.git@V0.7.8"
+COPY third_party/DeepPointMap /opt/deeppointmap
+# Python >= 3.10 compatibility (collections.Iterable lives in collections.abc since 3.3 and was
+# removed from collections in 3.10); the only change to the vendored source, applied at build time.
+RUN sed -i "s/^from collections import Iterable$/from collections.abc import Iterable/" \
+        /opt/deeppointmap/pipeline/parameters.py \
+    && grep -q "from collections.abc import Iterable" /opt/deeppointmap/pipeline/parameters.py
+WORKDIR /opt/deeppointmap

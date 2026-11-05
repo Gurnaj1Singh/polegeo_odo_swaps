@@ -1,0 +1,5 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+0.0,9.78,8.18,25.49,183.63,206.74,2146,0,5419,MAD-ICP
+10.0,1.02,1.96,14.58,184.2,207.49,2152,561,4858,MAD-ICP
+25.0,0.59,0.9,9.75,184.2,207.49,2152,1312,4107,MAD-ICP
+50.0,0.24,0.44,9.24,184.2,207.49,2152,2669,2750,MAD-ICP

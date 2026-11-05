@@ -1,0 +1,19 @@
+# FastReg (Arnold et al., RA-L 2021) on a current GPU (RTX 50xx, sm_120).
+# The official image (CUDA 11.0, PyTorch 1.7, Turing) cannot run on Blackwell, so the
+# vendored source (third_party/fastreg) is built against PyTorch 2.8 + CUDA 12.8.
+# The PointNet++ kernels use the THC API removed in PyTorch 1.11; it is ported mechanically
+# below (no numerical change): THC.h -> ATen/cuda/CUDAContext.h, THCState dropped, .data<T>() -> .data_ptr<T>(),
+# x.type().is_cuda() -> x.is_cuda().
+#   docker build -t fastreg:cu128 -f docker/Dockerfile.fastreg .
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir numpy==2.2.6 pandas==2.3.3 open3d==0.19.0 h5py tqdm \
+    && pip install --no-cache-dir torch_geometric==2.6.1 \
+    && pip install --no-cache-dir torch_cluster torch_scatter -f https://data.pyg.org/whl/torch-2.8.0+cu128.html
+COPY third_party/fastreg /opt/fastreg
+RUN cd /opt/fastreg/lib/pointnet2/src \
+    && sed -i 's|#include <THC/THC.h>|#include <ATen/cuda/CUDAContext.h>|; /extern THCState \*state;/d' *.cpp *.h \
+    && sed -i 's/\.data<\([a-z]*\)>()/.data_ptr<\1>()/g; s/x\.type()\.is_cuda()/x.is_cuda()/g' *.cpp \
+    && cd .. && MAX_JOBS=2 TORCH_CUDA_ARCH_LIST="12.0" pip install --no-cache-dir --no-build-isolation .
+WORKDIR /work

@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,0.58,0.81,10.12,48.61,51.01,2152,550,4869,RKO-LIO
+25.0,0.32,0.47,9.55,48.63,51.04,2153,1359,4060,RKO-LIO
+50.0,0.12,0.29,9.79,48.63,51.04,2153,2693,2726,RKO-LIO

@@ -1,0 +1,5 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+0.0,9.84,8.8,22.81,143.62,167.97,2147,0,5419,GenZ-ICP
+10.0,0.97,1.74,14.46,144.24,168.66,2152,561,4858,GenZ-ICP
+25.0,0.57,0.88,10.28,144.24,168.66,2152,1312,4107,GenZ-ICP
+50.0,0.23,0.41,9.21,144.24,168.66,2152,2669,2750,GenZ-ICP

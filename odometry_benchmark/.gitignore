@@ -1,0 +1,21 @@
+# Regenerated or downloaded locally; not part of the published benchmark (see README "What is not included").
+bag_full/
+data/
+cache/scans/
+cache/scans_intensity/
+cache/kitti_bins/
+cache/clid_seq/
+cache_rerun/
+outputs_rerun*/
+outputs/imu_variants/
+paper_ipas/figures/map_cache/
+# third-party method code, restored by third_party/fetch_third_party.sh (VENDORED_FROM.txt files stay tracked)
+third_party/*/*
+!third_party/*/VENDORED_FROM.txt
+!third_party/sdist/
+!third_party/sdist/*
+!third_party/wheels/
+!third_party/wheels/*
+!third_party/UGP/ckpts/
+third_party/UGP/ckpts/*
+!third_party/UGP/ckpts/SHA256SUMS

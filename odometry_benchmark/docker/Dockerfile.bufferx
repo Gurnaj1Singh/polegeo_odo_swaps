@@ -1,0 +1,23 @@
+# BUFFER-X (Seo et al., ICCV 2025) on PyTorch 2.8 + CUDA 12.8 (RTX 50xx / sm_120).
+# Same steps as the repository's scripts/install.sh (--skip-torch --with-hub), with every
+# extension pinned to a commit instead of its moving HEAD, compiled for sm_120.
+#   docker build -t bufferx:cu128 -f docker/Dockerfile.bufferx .
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+# system packages from the repository's scripts/install.sh (install_system_packages)
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libgomp1 libglib2.0-0 git \
+        build-essential cmake g++ gcc libc++-dev libc++1 libc++abi-dev libeigen3-dev libtbb-dev ninja-build unzip \
+    && rm -rf /var/lib/apt/lists/*
+ENV TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=1 FORCE_CUDA=1
+COPY third_party/BUFFER-X /opt/bufferx
+WORKDIR /opt/bufferx
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel ninja && pip install --no-cache-dir -e ".[runtime,hub]"
+RUN git clone https://github.com/LucasColas/Pointnet2_PyTorch.git /tmp/p2 \
+    && git -C /tmp/p2 checkout cc9068764276c039921b940260a2a44b178a7f7d \
+    && pip install --no-cache-dir --no-build-isolation /tmp/p2/pointnet2_ops_lib/.
+RUN pip install --no-cache-dir --no-build-isolation \
+        git+https://github.com/MinkyunSeo/knn_cuda.git@8b21dbfc86988f56588a5ed8ca3cc354122c5656
+RUN PYTHON=python sh cpp_wrappers/compile_wrappers.sh
+RUN git clone https://github.com/KinglittleQ/torch-batch-svd.git /tmp/svd \
+    && git -C /tmp/svd checkout c0a96119187f7d55f939d2ff2b92942c6d6ca930 \
+    && pip install --no-cache-dir --no-build-isolation /tmp/svd
+RUN python scripts/download_pretrained_models.py --source hf --repo-id Hyungtae-Lim/BUFFER-X

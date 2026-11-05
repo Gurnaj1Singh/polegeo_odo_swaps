@@ -1,0 +1,14 @@
+{
+  "pole": 42.85339429648593,
+  "loop": 78.17165739933262,
+  "frames_in_section": 2173,
+  "boxes": 2351,
+  "n_frames": 5420,
+  "odom_csv": "D:/Odometry/odometry_benchmark/outputs/csv/incremental_navigation_results_fastreg_run.csv",
+  "gnss_percentage": 0.0,
+  "vehicle": 35.318263102846686,
+  "pole_ms_per_frame_all": 7.906530313004784,
+  "vehicle_ms_per_frame_all": 6.516284705322267,
+  "pole_ms_per_frame_section": 19.720844130918515,
+  "vehicle_ms_per_frame_section": 16.253227382810255
+}

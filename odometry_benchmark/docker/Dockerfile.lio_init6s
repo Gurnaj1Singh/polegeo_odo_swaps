@@ -1,0 +1,13 @@
+# FAST-LIO2 and Faster-LIO with the IMU initialisation (gravity + gyro bias) averaged over 600 samples
+# (6 s at 100 Hz, inside the 6.8 s standstill of the SnowPole drive) instead of 10 / 20 samples (0.1-0.2 s).
+# Only MAX_INI_COUNT changes. IPAS Phase 3 (paper_ipas/PHASES.md).
+#   docker build -t fastlio2:noetic-init6s -f docker/Dockerfile.lio_init6s docker
+FROM fastlio2:noetic
+SHELL ["/bin/bash", "-lc"]
+RUN sed -i 's/#define MAX_INI_COUNT (10)/#define MAX_INI_COUNT (600)/' /root/ws_fl2/src/FAST_LIO/src/IMU_Processing.hpp \
+ && sed -i 's/constexpr int MAX_INI_COUNT = 20;/constexpr int MAX_INI_COUNT = 600;/' /root/ws/src/faster-lio/include/imu_processing.hpp \
+ && grep -q 'MAX_INI_COUNT (600)' /root/ws_fl2/src/FAST_LIO/src/IMU_Processing.hpp \
+ && grep -q 'MAX_INI_COUNT = 600' /root/ws/src/faster-lio/include/imu_processing.hpp
+RUN source /opt/ros/noetic/setup.bash && cd /root/ws && catkin_make -DCMAKE_BUILD_TYPE=Release -j2 \
+ && cd /root/ws_fl2 && catkin_make -DCMAKE_BUILD_TYPE=Release -j2
+WORKDIR /work

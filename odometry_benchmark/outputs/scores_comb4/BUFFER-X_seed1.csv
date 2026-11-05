@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,5.04,6.65,36.5,692.98,721.91,2147,550,4869,BUFFER-X
+25.0,1.74,3.06,23.16,695.08,724.51,2152,1359,4060,BUFFER-X
+50.0,0.74,1.28,15.24,695.92,725.2,2152,2693,2726,BUFFER-X

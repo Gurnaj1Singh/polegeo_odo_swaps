@@ -1,0 +1,13 @@
+method,modality,gnss_pct,no_poles_median_m,with_poles_median_m,n_scored_no_poles,n_scored_with_poles
+FastReg,LiDAR only,0,315.37,11.26,1811,2173
+FastReg,LiDAR only,10,2.55,2.11,2153,2152
+FastReg,LiDAR only,25,0.85,0.95,2153,2152
+FastReg,LiDAR only,50,0.15,0.46,2153,2152
+FAST-LIO2,LiDAR + IMU,0,162.31,10.03,1914,2161
+FAST-LIO2,LiDAR + IMU,10,1.49,1.24,2153,2152
+FAST-LIO2,LiDAR + IMU,25,0.53,0.68,2153,2151
+FAST-LIO2,LiDAR + IMU,50,0.06,0.33,2153,2152
+Faster-LIO,LiDAR + IMU,0,102.77,8.63,2015,2162
+Faster-LIO,LiDAR + IMU,10,0.86,0.86,2153,2152
+Faster-LIO,LiDAR + IMU,25,0.34,0.5,2153,2152
+Faster-LIO,LiDAR + IMU,50,0.04,0.22,2153,2152

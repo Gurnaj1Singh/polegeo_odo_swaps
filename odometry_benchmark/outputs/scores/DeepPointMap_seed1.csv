@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,3.27,8.87,164.91,569.94,511.42,2165,550,4869,DeepPointMap
+25.0,1.27,3.63,61.13,568.0,506.94,2155,1359,4060,DeepPointMap
+50.0,0.53,1.38,31.52,568.16,507.16,2154,2693,2726,DeepPointMap

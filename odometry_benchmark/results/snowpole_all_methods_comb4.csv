@@ -1,0 +1,18 @@
+category,method,year,venue,sensors,source,gnss0_median_m,gnss10_median_m,gnss25_median_m,gnss50_median_m,seed0-2_range_10/25/50,raw_drift_median_m,raw_drift_max_m,ms_per_scan
+"1. Non-DL, up to 2024",KISS-ICP,2023,RA-L 2023,LiDAR (+IMU levelling),run in this repo,2.29,0.8,0.47,0.18,0.78-0.82 / 0.42-0.47 / 0.18-0.18,188.02,776.49,54.0
+"1. Non-DL, up to 2024",MAD-ICP,2024,RA-L 2024,LiDAR (+IMU levelling),run in this repo,9.75,1.09,0.62,0.29,1.04-1.10 / 0.60-0.62 / 0.29-0.29,430.78,2741.07,92.7
+"1. Non-DL, up to 2024",FAST-LIO2,2022,T-RO 2022,LiDAR + IMU,run in this repo,10.03,1.24,0.68,0.33,1.12-1.25 / 0.64-0.69 / 0.32-0.33,514.36,3057.94,10.7
+"1. Non-DL, up to 2024",Faster-LIO,2022,RA-L 2022,LiDAR + IMU,run in this repo,8.63,0.86,0.5,0.22,0.83-0.89 / 0.49-0.50 / 0.21-0.22,282.73,2215.78,13.1
+"1. Non-DL, up to 2024",GLIM,2024,RAS 2024,LiDAR + IMU (GPU),run in this repo,10.03,1.23,0.69,0.32,1.11-1.23 / 0.65-0.69 / 0.31-0.32,464.61,2610.73,317.8
+"2. DL/ML, up to 2024",FastReg,2021,RA-L 2021,LiDAR,"author trajectory, re-scored here",8.91,2.26,1.33,0.6,2.26-2.47 / 1.28-1.37 / 0.57-0.60,,,
+"2. DL/ML, up to 2024",FastReg-run,2021,RA-L 2021,LiDAR (+IMU levelling),run in this repo,11.26,2.11,0.95,0.46,1.91-2.21 / 0.88-0.95 / 0.46-0.46,774.67,2931.86,254.0
+"2. DL/ML, up to 2024",DeepPointMap,2024,AAAI 2024,LiDAR (+IMU levelling),run in this repo,2136.35,3.59,1.39,0.57,3.37-3.77 / 1.26-1.39 / 0.56-0.57,631.95,7174.22,116.8
+"2. DL/ML, up to 2024",PIN-SLAM,2024,T-RO 2024,LiDAR (+IMU levelling),run in this repo,18.16,1.66,0.85,0.38,1.55-1.66 / 0.81-0.85 / 0.37-0.38,580.9,3698.49,552.3
+"3. Non-DL, 2025-2026",RKO-LIO,2025,arXiv/RA-L 2025,LiDAR + IMU,run in this repo,1.14,0.66,0.38,0.14,0.66-0.73 / 0.33-0.38 / 0.13-0.14,99.07,482.81,20.6
+"3. Non-DL, 2025-2026",GenZ-ICP,2025,RA-L 2025,LiDAR (+IMU levelling),run in this repo,9.56,1.05,0.62,0.27,0.99-1.06 / 0.58-0.62 / 0.26-0.27,355.21,2124.29,259.0
+"3. Non-DL, 2025-2026",Super-LIO,2026,RA-L 2026,LiDAR + IMU,run in this repo,9.38,0.99,0.58,0.25,0.95-1.02 / 0.55-0.58 / 0.24-0.25,370.64,2537.78,5.7
+"4. DL/ML, 2025-2026",BUFFER-X,2025,ICCV 2025,LiDAR (+IMU levelling),run in this repo,61.68,5.2,1.86,0.74,5.04-5.30 / 1.74-1.86 / 0.71-0.74,1372.72,7080.98,2149.3
+"4. DL/ML, 2025-2026",UGP,2025,CVPR 2025,LiDAR (+IMU levelling),run in this repo,1080.43,3.63,1.48,0.65,3.50-3.63 / 1.43-1.51 / 0.63-0.65,560.64,4940.56,427.1
+"4. DL/ML, 2025-2026",CLID-SLAM,2025,RA-L 2025,LiDAR + IMU (+IMU levelling),"FAILED - lost track on the highway: stopped itself at scan 911/5419 with the repository's 1-60 m Ouster-128 config and at scan 831/5419 with the shared 2-150 m range (it tracks RKO-LIO to within 2 m for the first 500 scans, then under-estimates speed above ~15 m/s); outputs/clidslam_attempts/",,,,,,,,
+"4. DL/ML, 2025-2026",Hi-LOAM,2026,IEEE TMM 2026,LiDAR,"not runnable: public repo (Zhangjyhhh/Hi-LOAM @ a8add39) never contained its model/ package (FeatureOctree, Decoder); replaced by CLID-SLAM",,,,,,,,
+"Extra: non-DL, 2025 (outside the 12)",Splat-LOAM,2025,ICCV 2025,LiDAR (+IMU levelling),"FAILED - lost track on the highway: from sensor t~150 s its estimate moved ~0.6 m/s (true 15-20 m/s) and climbed to +34 m, inserting a keyframe every scan (~3 min/scan, GPU memory full); stopped manually at t~278 s of ~542 s after 6 h; outputs/splatloam_attempts/full_run_lost_track/",,,,,,,,

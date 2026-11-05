@@ -1,0 +1,7 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+0.0,10.92,13.34,47.18,478.0,444.48,2171,0,5419,FastReg-nolevel
+2.0,8.1,8.99,47.18,472.85,441.12,2153,108,5311,FastReg-nolevel
+5.0,3.45,5.47,31.02,474.91,442.31,2151,309,5110,FastReg-nolevel
+10.0,2.07,3.71,21.46,475.23,442.52,2152,561,4858,FastReg-nolevel
+25.0,0.95,1.73,14.74,475.23,442.52,2152,1312,4107,FastReg-nolevel
+50.0,0.47,0.74,12.51,475.23,442.52,2152,2669,2750,FastReg-nolevel

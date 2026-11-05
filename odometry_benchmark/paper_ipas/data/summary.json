@@ -1,0 +1,146 @@
+{
+  "gnss_equivalence": {
+    "FAST-LIO2@10%": {
+      "error_m": 1.24,
+      "fastreg_gnss_pct_needed": 18.0
+    },
+    "FAST-LIO2@25%": {
+      "error_m": 0.68,
+      "fastreg_gnss_pct_needed": 37.3
+    },
+    "Faster-LIO@10%": {
+      "error_m": 0.86,
+      "fastreg_gnss_pct_needed": 27.9
+    },
+    "Faster-LIO@25%": {
+      "error_m": 0.5,
+      "fastreg_gnss_pct_needed": 47.5
+    }
+  },
+  "pole_spacing": {
+    "pole_spacing_median_m": 9.2,
+    "pole_spacing_p10_m": 7.3
+  },
+  "dense_seed_range": {
+    "FAST-LIO2@0": [
+      10.03,
+      10.03
+    ],
+    "FAST-LIO2@2": [
+      3.24,
+      3.84
+    ],
+    "FAST-LIO2@5": [
+      1.55,
+      2.01
+    ],
+    "FAST-LIO2@10": [
+      1.12,
+      1.25
+    ],
+    "FAST-LIO2@15": [
+      0.86,
+      0.98
+    ],
+    "FAST-LIO2@20": [
+      0.74,
+      0.8
+    ],
+    "FAST-LIO2@25": [
+      0.64,
+      0.69
+    ],
+    "FAST-LIO2@30": [
+      0.56,
+      0.59
+    ],
+    "FAST-LIO2@40": [
+      0.42,
+      0.44
+    ],
+    "FAST-LIO2@50": [
+      0.32,
+      0.33
+    ],
+    "FastReg@0": [
+      11.26,
+      11.26
+    ],
+    "FastReg@2": [
+      6.81,
+      7.87
+    ],
+    "FastReg@5": [
+      3.14,
+      3.88
+    ],
+    "FastReg@10": [
+      1.91,
+      2.21
+    ],
+    "FastReg@15": [
+      1.41,
+      1.54
+    ],
+    "FastReg@20": [
+      1.11,
+      1.21
+    ],
+    "FastReg@25": [
+      0.88,
+      0.95
+    ],
+    "FastReg@30": [
+      0.79,
+      0.8
+    ],
+    "FastReg@40": [
+      0.64,
+      0.64
+    ],
+    "FastReg@50": [
+      0.46,
+      0.46
+    ],
+    "Faster-LIO@0": [
+      8.63,
+      8.63
+    ],
+    "Faster-LIO@2": [
+      1.42,
+      1.5
+    ],
+    "Faster-LIO@5": [
+      1.06,
+      1.09
+    ],
+    "Faster-LIO@10": [
+      0.83,
+      0.89
+    ],
+    "Faster-LIO@15": [
+      0.68,
+      0.75
+    ],
+    "Faster-LIO@20": [
+      0.56,
+      0.59
+    ],
+    "Faster-LIO@25": [
+      0.49,
+      0.5
+    ],
+    "Faster-LIO@30": [
+      0.42,
+      0.43
+    ],
+    "Faster-LIO@40": [
+      0.3,
+      0.31
+    ],
+    "Faster-LIO@50": [
+      0.21,
+      0.22
+    ]
+  }
+}

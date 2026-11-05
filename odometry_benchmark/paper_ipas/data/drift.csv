@@ -1,0 +1,7 @@
+method,modality,drift_median_m,drift_max_m,heading_err_median_deg,heading_err_p95_deg,step_len_err_median_pct,step_len_bias_pct,drift_at_1km_m,drift_at_2km_m,drift_at_5km_m,sec_heading_err_median_deg,sec_turn_rate_err_median_deg_s,sec_step_len_bias_pct
+"Faster-LIO, 100 Hz (control)",100 Hz (control),297.006,2317.933,11.794,33.16,2.848,-5.368,12.41,48.869,367.243,5.224,0.106,-2.44
+"Faster-LIO, 50 Hz",50 Hz,241.243,1989.741,9.045,29.457,2.853,-5.391,12.71,46.697,294.837,4.305,0.107,-2.389
+"Faster-LIO, 25 Hz",25 Hz,205.671,1882.954,8.302,28.803,2.904,-5.25,12.66,45.689,253.228,3.472,0.111,-2.429
+"Faster-LIO, 10 Hz",10 Hz,165.866,1702.736,5.972,26.611,3.193,-5.817,12.656,41.207,198.598,2.491,0.106,-2.572
+"Faster-LIO, 3x noise",3x noise,306.974,2261.924,11.194,32.409,2.902,-5.474,12.593,50.286,373.322,5.655,0.108,-2.476
+"Faster-LIO, 10x noise",10x noise,285.481,2282.093,11.178,31.868,2.815,-5.37,12.39,48.624,351.46,5.106,0.116,-2.448

@@ -1,0 +1,16 @@
+{
+  "method": "ugp",
+  "n_scans": 5419,
+  "ms_per_scan_mean": 427.06,
+  "ms_per_scan_median": 414.75,
+  "fps": 2.3,
+  "neighbor_limits": [
+    67,
+    80,
+    107,
+    79,
+    70
+  ],
+  "checkpoint": "/opt/ugp/ckpts/kitti.pth.tar",
+  "fallback_pairs [pair, voxel_m, max_range_m (0 = full)]": []
+}

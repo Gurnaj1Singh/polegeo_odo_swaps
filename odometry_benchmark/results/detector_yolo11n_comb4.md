@@ -1,0 +1,31 @@
+# YOLO11n on Combination 4 (combined_color): COCO-pretrained vs from scratch
+
+SnowPole Detection dataset, input uint8 BGR = (near-IR, signal, reflec) >> 8, imgsz 1024, up to 500 epochs with early stop (patience 50 on validation fitness), hsv_h 0. Seeds 0 per init.
+
+| Run | Epochs run | Val mAP50-95 | Val fitness | Test P | Test R | Test F1 | Test mAP50 | Test mAP50-95 |
+|---|---|---|---|---|---|---|---|---|
+| comb4_coco_s0 | 205 | 0.4315 | 0.4767 | 0.9099 | 0.8709 | 0.89 | 0.917 | 0.439 |
+| comb4_scratch_s0 | 218 | 0.4233 | 0.4713 | 0.9345 | 0.8203 | 0.8736 | 0.9031 | 0.4335 |
+| paper draft, Combination 4 (test) |  |  |  | 0.884 | 0.848 | 0.866 | 0.911 | 0.458 |
+
+## Statistical comparison (test mAP50-95)
+
+- COCO: 0.4396 +/- None (mean +/- sd over seeds); scratch: 0.4372 +/- None
+- difference COCO - scratch: +0.0024; two-level bootstrap (seeds x test images, 10000 draws) 95 % CI [-0.0153, +0.0196], p = 0.8096
+- one seed per init: no seed-level test; the bootstrap covers test-image variation only (seed experiment stopped after seed 0, the two inits being close)
+- **Decision: COCO has the higher mean, but the difference is NOT significant**
+
+## Detector used for localization: `comb4_coco_s0` (best validation fitness among the coco seeds)
+
+Copied to `models/yolo11n_comb4_final.pt`. At fixed confidence on the test split (greedy match, IoU >= 0.5; mIoU = mean over ground-truth boxes of the best predicted-box IoU, 0 if missed):
+
+| conf | TP | FP | FN | Precision | Recall | F1 | mIoU |
+|---|---|---|---|---|---|---|---|
+| 0.25 | 357 | 71 | 38 | 0.8341 | 0.9038 | 0.8676 | 0.6959 |
+| 0.6 | 262 | 6 | 133 | 0.9776 | 0.6633 | 0.7903 | 0.5119 |
+
+The localization pipeline uses conf 0.6 (same as the signal YOLOv5 model).
+
+## Runtime
+
+YOLO11n Combination 4, RTX 5050 Laptop, 1024x160 padded input, conf 0.6: 8.25 ms/frame end-to-end (median 8.08; preprocess 0.24 + inference 6.76 + postprocess 0.82 ms), 197 test images after 20 warm-up frames.

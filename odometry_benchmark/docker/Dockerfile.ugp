@@ -1,0 +1,12 @@
+# UGP (Pang et al., CVPR 2025 highlight) on PyTorch 2.8 + CUDA 12.8 (RTX 50xx / sm_120).
+# README targets torch 1.7.1; its C++ extensions (grid subsampling, radius neighbours) are
+# CPU code and build unchanged against torch 2.8. KITTI weights vendored in third_party/UGP/ckpts.
+#   docker build -t ugp:cu128 -f docker/Dockerfile.ugp .
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libgomp1 libglib2.0-0 git \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir scipy tqdm coloredlogs easydict nibabel open3d==0.19.0 einops pandas \
+        ipdb ipython scikit-learn matplotlib tensorboard tensorboardX
+COPY third_party/UGP /opt/ugp
+WORKDIR /opt/ugp
+RUN TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=1 python setup.py build develop

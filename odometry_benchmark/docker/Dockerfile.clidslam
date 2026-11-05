@@ -1,0 +1,18 @@
+# CLID-SLAM (Jiang et al., RA-L 2025; DUTRobot/CLID-SLAM @ 5c4f9e7) on PyTorch 2.8 + CUDA 12.8 (RTX 50xx).
+# The README installs torch from the cu128 index, then requirements.txt; no CUDA extensions to build.
+# ROS (robostack) is only needed by the bag converter, replaced here by scripts/16_export_clid_sequence.py.
+#   docker build -t clidslam:cu128 -f docker/Dockerfile.clidslam .
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libgomp1 git \
+    && rm -rf /var/lib/apt/lists/*
+COPY third_party/CLID-SLAM/requirements.txt /tmp/requirements.txt
+# requirements.txt pins opencv-python==4.10.0, which PyPI never published (4.10.0 builds are .82/.84)
+RUN sed -i "s/^opencv-python==4.10.0$/opencv-python==4.10.0.84/" /tmp/requirements.txt \
+ && pip install --no-cache-dir -r /tmp/requirements.txt pandas "matplotlib<3.9"
+# matplotlib<3.9: the trajectory writer calls matplotlib.cm.get_cmap, removed in 3.9 (same pin as PIN-SLAM)
+COPY third_party/CLID-SLAM /opt/clidslam
+# CLID-SLAM (like PIN-SLAM) logs `git rev-parse HEAD` at start-up; the vendored copy has no history
+# (upstream commit is in VENDORED_FROM.txt), so it becomes a one-commit repository
+RUN cd /opt/clidslam && git init -q && git add -A \
+    && git -c user.name=bench -c user.email=bench@local commit -qm "vendored $(head -1 VENDORED_FROM.txt)"
+WORKDIR /opt/clidslam

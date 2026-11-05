@@ -1,0 +1,70 @@
+# CLID-SLAM (DUTRobot/CLID-SLAM @ 5c4f9e7, RA-L 2025) on SnowPole: the repository's Ouster-128 config
+# (config/run_ncd128.yaml, Newer College, OS0-128 + its IMU). Changes, none of them tuning:
+#   - paths: /seq = cache/clid_seq written by scripts/16_export_clid_sequence.py
+#   - tracker.T_imu_lidar: SnowPole's OS2-128 LiDAR->IMU extrinsic from the bag's sensor metadata
+#     (cache/extrinsics.yaml gives T_lidar_imu = [I | 0.006253, -0.011775, 0.007645]; this is its inverse)
+#   - headless: o3d visualiser off (which also turns meshing off), no map export (only the trajectory is scored)
+#   - process range: the shared 2-150 m, as for PIN-SLAM (CLID-SLAM's parent). The repository has only
+#     handheld/legged configs (1-60 m); with 1-60 m it tracked RKO-LIO to within 2 m for 500 scans, then
+#     under-estimated speed once the car reached 17-20 m/s on the open highway and lost track at scan 911
+#     (outputs/clidslam_attempts/range_1-60m).
+setting:
+  name: "snowpole"
+  output_root: "/work/outputs/clidslam"
+  imu_path: "/seq/imu"
+  pc_path: "/seq/lidar"
+  pose_ts_path: "/seq/pose_ts.txt"
+  deskew: True
+
+process:
+  min_range_m: 2.0
+  max_range_m: 150.0
+  min_z_m: -10.0
+  vox_down_m: 0.1
+
+sampler:
+  local_voxel_size_m: 0.2
+  surface_sample_range_m: 0.25
+  surface_sample_n: 4
+  free_sample_begin_ratio: 0.5
+  free_sample_end_dist_m: 1.2
+  free_front_sample_n: 2
+
+neuralpoints:
+  voxel_size_m: 0.4
+  num_nei_cells: 2
+  search_alpha: 0.5
+  weighted_first: True
+
+loss:
+  sigma_sigmoid_m: 0.1
+  loss_weight_on: True
+  dist_weight_scale: 0.8
+
+continual:
+  batch_size_new_sample: 1000
+  pool_capacity: 1e7
+
+tracker:
+  measurement_noise_covariance: 0.01
+  bias_noise_covariance: 0.0001
+  source_vox_down_m: 0.6
+  iter_n: 50
+  T_imu_lidar:
+    - [ 1.0,   0,    0, -0.006253 ]
+    - [   0, 1.0,    0,  0.011775 ]
+    - [   0,   0,  1.0, -0.007645 ]
+    - [   0,   0,    0,    1.0 ]
+
+optimizer:
+  iters: 10
+  batch_size: 16384
+  learning_rate: 0.01
+  adaptive_iters: True
+
+eval:
+  wandb_vis_on: False
+  o3d_vis_on: False
+  silence_log: True
+  mesh_freq_frame: 50
+  save_map: False

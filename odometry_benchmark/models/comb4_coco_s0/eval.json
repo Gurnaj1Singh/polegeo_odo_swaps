@@ -1,0 +1,25 @@
+{
+  "run": "comb4_coco_s0",
+  "init": "coco",
+  "seed": 0,
+  "weights": "models\\comb4_coco_s0\\weights\\best.pt",
+  "epochs_run": 205,
+  "imgsz": 1024,
+  "input": "combined_color (B,G,R = near-IR, signal, reflec), uint8 = raw16 >> 8",
+  "val": {
+    "precision": 0.8898,
+    "recall": 0.8542,
+    "f1": 0.8717,
+    "mAP50": 0.8832,
+    "mAP50-95": 0.4315,
+    "fitness": 0.4767
+  },
+  "test": {
+    "precision": 0.9099,
+    "recall": 0.8709,
+    "f1": 0.89,
+    "mAP50": 0.917,
+    "mAP50-95": 0.439,
+    "fitness": 0.4868
+  }
+}

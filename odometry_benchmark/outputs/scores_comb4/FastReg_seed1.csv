@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,2.28,3.31,32.27,35.19,33.66,2149,550,4869,FastReg
+25.0,1.37,2.0,17.64,35.29,33.68,2148,1359,4060,FastReg
+50.0,0.59,1.09,12.92,35.29,33.69,2149,2693,2726,FastReg

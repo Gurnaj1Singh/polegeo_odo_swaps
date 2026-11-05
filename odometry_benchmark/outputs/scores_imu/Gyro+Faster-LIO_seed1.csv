@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,0.62,0.99,11.7,18.2,25.81,2154,550,4869,Gyro+Faster-LIO
+25.0,0.31,0.51,11.7,18.19,25.79,2153,1359,4060,Gyro+Faster-LIO
+50.0,0.12,0.32,11.56,18.19,25.79,2153,2693,2726,Gyro+Faster-LIO

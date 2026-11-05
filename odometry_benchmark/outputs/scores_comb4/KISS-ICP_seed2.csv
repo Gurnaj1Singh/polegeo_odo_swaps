@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,0.82,1.31,11.94,91.99,96.74,2153,543,4876,KISS-ICP
+25.0,0.42,0.67,11.94,91.99,96.74,2153,1340,4079,KISS-ICP
+50.0,0.18,0.38,11.55,91.99,96.74,2153,2710,2709,KISS-ICP

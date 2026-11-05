@@ -1,0 +1,8 @@
+{
+  "method": "fastreg",
+  "n_scans": 5419,
+  "ms_per_scan_mean": 254.03,
+  "ms_per_scan_median": 253.05,
+  "fps": 3.9,
+  "gpu": "NVIDIA GeForce RTX 5050 Laptop GPU"
+}

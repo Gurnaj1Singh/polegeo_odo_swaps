@@ -1,0 +1,4 @@
+gnss_pct,err_pred_median,err_pred_mean,err_pred_max,err_odom_median,err_odom_mean,n_scored_frames,gnss_used,predictive,method
+10.0,3.58,5.66,64.39,298.51,316.29,2150,550,4869,UGP
+25.0,1.45,2.47,27.65,298.94,316.51,2153,1359,4060,UGP
+50.0,0.6,1.02,12.19,299.16,316.61,2154,2693,2726,UGP

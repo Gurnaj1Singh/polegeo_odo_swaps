@@ -1,0 +1,22 @@
+# Super-LIO (Wang et al., RA-L 2026) in ROS 2 Jazzy - the reference repo's image
+# (third_party/polegeo_odo_swaps/.../superlio_integration/docker/Dockerfile) built from the vendored
+# Super-LIO source (third_party/polegeo_odo_swaps/Super-LIO, incl. its reliable-QoS mod), with the
+# colcon build limited to 2 jobs.
+#   docker build -t superlio:jazzy -f docker/Dockerfile.superlio third_party/polegeo_odo_swaps/Super-LIO
+FROM ros:jazzy-ros-base
+SHELL ["/bin/bash", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential cmake procps \
+      python3-colcon-common-extensions \
+      libpcl-dev libeigen3-dev libgoogle-glog-dev libgflags-dev libtbb-dev \
+      ros-jazzy-pcl-ros ros-jazzy-pcl-conversions \
+      ros-jazzy-ros2bag ros-jazzy-rosbag2-transport \
+      ros-jazzy-rosbag2-storage-mcap ros-jazzy-rosbag2-storage-sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /ws
+COPY src /ws/src
+RUN source /opt/ros/jazzy/setup.bash \
+    && MAKEFLAGS=-j2 colcon build --parallel-workers 1 --cmake-args -DCMAKE_BUILD_TYPE=Release \
+    && rm -rf /ws/build /ws/log
+CMD ["bash"]

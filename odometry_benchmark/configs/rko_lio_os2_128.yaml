@@ -1,0 +1,16 @@
+# RKO-LIO (Malladi et al., 2025) on the SnowPole Ouster OS2-128 bag.
+# Base frame = LiDAR (os_sensor). The bag has no /tf, so extrinsics are explicit.
+# IMU (os_imu) pose in os_sensor, from Trip068.json imu_to_sensor_transform (mm -> m),
+# identical to the Faster-LIO/Super-LIO extrinsic used in the reference repo.
+extrinsic_imu2base_quat_xyzw_xyz: [0.0, 0.0, 0.0, 1.0, 0.006253, -0.011775, 0.007645]
+extrinsic_lidar2base_quat_xyzw_xyz: [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+lio:
+  deskew: true
+  min_range: 2.0        # same blind as Faster-LIO / Super-LIO
+  max_range: 150.0      # same det_range as Faster-LIO / Super-LIO
+  voxel_size: 1.0
+  max_correspondence_distance: 0.5
+  initialization_phase: true
+lidar_timestamps:
+  force_relative: true  # Ouster 't' field is ns since scan start
+  multiplier_to_seconds: 1.0e-9

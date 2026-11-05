@@ -13,6 +13,11 @@ against the original **FastReg** baseline:
 Each backend produces the **same** `easting,northing` CSV that the snow-pole
 pipeline consumes unchanged, so they can be compared 1:1 on speed and accuracy.
 
+> **Extended benchmark:** [`odometry_benchmark/`](odometry_benchmark/README.md) compares sixteen odometry methods
+> (KISS-ICP, MAD-ICP, GenZ-ICP, RKO-LIO, FAST-LIO2, Faster-LIO, Super-LIO, GLIM, FastReg, PIN-SLAM, DeepPointMap,
+> BUFFER-X, UGP, CLID-SLAM, Hi-LOAM, Splat-LOAM) in this pipeline with the YOLOv5 signal and a YOLO11n Combination 4
+> pole detector, plus IMU studies, figures and a per-stage runtime study.
+
 > **The dataset (~47 GB) is NOT in this repo — download it first (see below).**
 > The source tree is ~29 MB; the sensor bags, build artifacts, virtualenvs and all
 > regenerable outputs are git-ignored.
